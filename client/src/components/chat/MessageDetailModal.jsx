@@ -1,0 +1,104 @@
+import React from "react";
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from "framer-motion";
+
+const MessageDetailModal = ({ message, onClose, groupReactions }) => {
+  if (!message) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-800">
+              Message Details
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            {message.image && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Image
+                </label>
+                <img
+                  src={message.image}
+                  alt="Message"
+                  className="mt-2 rounded-lg max-w-full"
+                />
+              </div>
+            )}
+            {message.text && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Message
+                </label>
+                <p className="mt-2 text-gray-800">{message.text}</p>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                Sent At
+              </label>
+              <p className="mt-2 text-gray-600">
+                {new Date(message.createdAt).toLocaleString()}
+              </p>
+            </div>
+            {message.reactions && message.reactions.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Reactions
+                </label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {groupReactions(message.reactions).map((reaction) => (
+                    <div
+                      key={reaction.emoji}
+                      className="flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1"
+                    >
+                      <span>{reaction.emoji}</span>
+                      <span className="text-sm text-gray-600">
+                        {reaction.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default MessageDetailModal;
