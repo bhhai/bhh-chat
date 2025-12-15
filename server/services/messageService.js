@@ -182,6 +182,9 @@ export const sendMessage = async (senderId, receiverId, messageData) => {
 
   await newMessage.save();
 
+  // Populate sender and receiver before returning
+  await newMessage.populate("sender receiver");
+
   return newMessage;
 };
 

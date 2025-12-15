@@ -82,7 +82,9 @@ const RightSidebar = () => {
   ];
 
   useEffect(() => {
-    setMsgImages(messages.filter((msg) => msg.image).map((msg) => msg.image));
+    setMsgImages(
+      messages?.filter((msg) => msg?.image)?.map((msg) => msg?.image)
+    );
   }, [messages]);
 
   return (
@@ -312,14 +314,14 @@ const RightSidebar = () => {
           </motion.h3>
 
           <AnimatePresence>
-            {msgImages.length > 0 ? (
+            {msgImages?.length > 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
                 className="grid grid-cols-2 gap-3"
               >
-                {msgImages.map((url, index) => (
+                {msgImages?.map((url, index) => (
                   <motion.div
                     key={index}
                     whileHover={{ scale: 1.02 }}

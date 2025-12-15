@@ -1,18 +1,18 @@
-import React from "react";
 import { motion } from "framer-motion";
+import React from "react";
 import { FaEllipsisV, FaTrashAlt } from "react-icons/fa";
 import { IoCheckmarkDoneOutline } from "react-icons/io5";
-import { formatMessageTime } from "../../lib/utils";
 import assets from "../../assets/assets";
-import ReactionPicker from "./ReactionPicker";
+import { formatMessageTime } from "../../lib/utils";
 import ReactionList from "./ReactionList";
+import ReactionPicker from "./ReactionPicker";
 
 const MessageItem = ({
   msg,
   isSender,
   selectedUser,
   authUser,
-  users,
+  // users,
   showReactionPicker,
   showDropdown,
   hoveredReaction,
@@ -39,7 +39,9 @@ const MessageItem = ({
       className={`flex items-end gap-3 ${
         isSender ? "justify-end" : "justify-start"
       } group relative`}
-      onTouchStart={isSender && !isDeleted ? () => onTouchStart(msg) : undefined}
+      onTouchStart={
+        isSender && !isDeleted ? () => onTouchStart(msg) : undefined
+      }
       onTouchEnd={isSender && !isDeleted ? onTouchEnd : undefined}
     >
       {!isSender && (
@@ -183,4 +185,3 @@ const MessageItem = ({
 };
 
 export default MessageItem;
-

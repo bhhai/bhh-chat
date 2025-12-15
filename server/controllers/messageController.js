@@ -122,13 +122,24 @@ export const sendMessage = async (req, res) => {
       imageFile,
     });
 
-    // Emit the new message to the receiver's socket (real-time communication)
+    // Populate sender and receiver fields for socket emission
+    await newMessage.populate("sender receiver");
+
+    // Emit the new message to both sender and receiver (real-time communication)
+    const senderSocketId = userSocketMap[sender];
     const receiverSocketId = userSocketMap[receiver];
+
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("newMessage", newMessage);
+    }
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
-    res.status(200).json(newMessage);
+    res.status(200).json({
+      success: true,
+      message: newMessage,
+    });
   } catch (error) {
     console.error("Send message error:", error);
     res.status(500).json({ message: error.message });

@@ -83,21 +83,32 @@ const HomePage = () => {
         <div className="h-full overflow-hidden relative">
           {/* Toggle Right Sidebar Button - Desktop */}
           {selectedUser && (
-            <button
+            <motion.button
               onClick={toggleRightSidebar}
-              className={`hidden lg:flex absolute top-4 right-4 z-20 p-2.5 rounded-full shadow-md transition-all duration-200 ${
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className={`hidden lg:flex absolute cursor-pointer top-5 right-4 z-20 items-center justify-center w-8 h-8 rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ${
                 showRightSidebar
-                  ? "bg-gray-200 hover:bg-gray-300 text-gray-700"
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
+                  ? "bg-white/90 hover:bg-white border border-gray-200 text-gray-600 hover:text-gray-800 hover:shadow-xl"
+                  : "bg-gradient-to-br from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white shadow-indigo-500/50 hover:shadow-indigo-500/60"
               }`}
-              title={showRightSidebar ? "Ẩn thông tin" : "Hiện thông tin"}
+              title={showRightSidebar ? "Hide information" : "Show information"}
             >
-              {showRightSidebar ? (
-                <FaTimes className="w-5 h-5" />
-              ) : (
-                <FaInfoCircle className="w-5 h-5" />
-              )}
-            </button>
+              <motion.div
+                initial={false}
+                animate={{ rotate: showRightSidebar ? 90 : 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+              >
+                {showRightSidebar ? (
+                  <FaTimes className="w-5 h-5" />
+                ) : (
+                  <FaInfoCircle className="w-5 h-5" />
+                )}
+              </motion.div>
+            </motion.button>
           )}
           <ChatContainer
             onToggleRightSidebar={toggleRightSidebar}
@@ -143,7 +154,7 @@ const HomePage = () => {
                   <FaArrowLeft className="w-5 h-5 text-gray-700" />
                 </button>
                 <h2 className="text-lg font-semibold text-gray-800">
-                  Thông tin
+                  Information
                 </h2>
               </div>
               <div className="h-[calc(100vh-60px)] overflow-y-auto">

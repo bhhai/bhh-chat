@@ -26,7 +26,12 @@ const MessageList = ({
   return (
     <>
       {messages.map((msg, index) => {
-        const isSender = msg.sender === authUser._id;
+        // Handle both populated (object) and non-populated (string) sender
+        const senderId =
+          typeof msg.sender === "object" && msg.sender !== null
+            ? msg.sender._id || msg.sender
+            : msg.sender;
+        const isSender = senderId?.toString() === authUser._id?.toString();
         return (
           <MessageItem
             key={msg._id || index}

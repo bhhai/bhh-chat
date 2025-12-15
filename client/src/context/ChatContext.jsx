@@ -61,55 +61,98 @@ export const ChatProvider = ({ children }) => {
         }
 
         // Send to server with FormData
-        const { data } = await axios.post(
-          `/api/messages/send/${selectedUser._id}`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
+        await axios.post(`/api/messages/send/${selectedUser._id}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
 
-        if (data.success && selectedUser) {
-          // Invalidate messages query to refetch and show new message
-          queryClient.invalidateQueries({
-            queryKey: ["messages", selectedUser._id],
-          });
-        }
+        // Don't reset queries here - let socket event handle the update
+        // This allows infinity scroll to continue working normally
+        // The socket event will update the cache optimistically with the new message
       } catch (error) {
         toast.error(error.response?.data?.message || "Failed to send message");
       }
     },
-    [axios, selectedUser, queryClient]
+    [axios, selectedUser]
   );
 
   const subscribeToMessages = useCallback(() => {
     if (!socket) return;
     socket.on("newMessage", (newMessage) => {
-      if (selectedUser && newMessage.sender === selectedUser._id) {
-        // Invalidate and refetch messages for current conversation
-        queryClient.invalidateQueries({
-          queryKey: ["messages", selectedUser._id],
-        });
-        axios.put(`/api/messages/mark/${newMessage._id}`);
-        setUnseenMessages((prev) => ({
-          ...prev,
-          [selectedUser._id]: 0,
-        }));
-      } else if (
+      // Handle both populated (object) and non-populated (string) sender/receiver
+      const senderId =
+        typeof newMessage.sender === "object" && newMessage.sender !== null
+          ? newMessage.sender._id || newMessage.sender
+          : newMessage.sender;
+      const receiverId =
+        typeof newMessage.receiver === "object" && newMessage.receiver !== null
+          ? newMessage.receiver._id || newMessage.receiver
+          : newMessage.receiver;
+
+      const conversationUserId =
+        senderId?.toString() === authUser._id?.toString()
+          ? receiverId
+          : senderId;
+
+      // Update cache optimistically by adding message to first page
+      if (
         selectedUser &&
-        newMessage.sender === authUser._id &&
-        newMessage.receiver === selectedUser._id
+        conversationUserId?.toString() === selectedUser._id?.toString()
       ) {
-        // Invalidate and refetch messages for current conversation
-        queryClient.invalidateQueries({
-          queryKey: ["messages", selectedUser._id],
+        queryClient.setQueryData(["messages", selectedUser._id], (oldData) => {
+          // If no cache exists yet, create a new page with the message
+          if (!oldData || !oldData.pages || oldData.pages.length === 0) {
+            return {
+              pages: [
+                {
+                  messages: [newMessage],
+                  hasMore: true,
+                  page: 1,
+                  total: 1,
+                },
+              ],
+              pageParams: [1],
+            };
+          }
+
+          // Check if message already exists in cache
+          const firstPage = oldData.pages[0];
+          const messageExists = firstPage.messages.some(
+            (msg) => msg._id?.toString() === newMessage._id?.toString()
+          );
+
+          if (messageExists) {
+            return oldData;
+          }
+
+          // Add new message to the first page (newest messages)
+          const updatedFirstPage = {
+            ...firstPage,
+            messages: [newMessage, ...firstPage.messages],
+          };
+
+          return {
+            ...oldData,
+            pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+          };
         });
+
+        // Mark as seen if it's a message from the other user
+        if (senderId?.toString() === selectedUser._id?.toString()) {
+          axios.put(`/api/messages/mark/${newMessage._id}`);
+          setUnseenMessages((prev) => ({
+            ...prev,
+            [selectedUser._id]: 0,
+          }));
+        }
       } else {
+        console.log("Not current conversation, updating unseen count");
+        // Update unseen messages count for other conversations
         setUnseenMessages((prevUnseenMessages) => ({
           ...prevUnseenMessages,
-          [newMessage.sender]: (prevUnseenMessages[newMessage.sender] || 0) + 1,
+          [conversationUserId]:
+            (prevUnseenMessages[conversationUserId] || 0) + 1,
         }));
       }
     });
