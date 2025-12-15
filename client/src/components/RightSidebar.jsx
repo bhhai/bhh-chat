@@ -19,12 +19,10 @@ const RightSidebar = () => {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3 }}
-        className={`bg-white text-gray-800 w-full h-full flex flex-col border-l border-gray-100 shadow-sm ${
-          selectedUser ? "max-md:hidden" : ""
-        }`}
+        className="bg-white text-gray-800 w-full h-full flex flex-col border-l border-gray-100 shadow-sm"
       >
         {/* Profile Section */}
-        <div className="pt-8 px-6 flex flex-col items-center gap-3 text-sm font-light">
+        <div className="pt-6 sm:pt-8 px-4 sm:px-6 flex flex-col items-center gap-3 text-sm font-light">
           <motion.div
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
@@ -45,8 +43,8 @@ const RightSidebar = () => {
               />
             )}
           </motion.div>
-          
-          <motion.h1 
+
+          <motion.h1
             className="text-xl font-semibold flex items-center gap-2"
             initial={{ y: 5, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -54,9 +52,9 @@ const RightSidebar = () => {
           >
             {selectedUser.fullName}
           </motion.h1>
-          
+
           {selectedUser.bio && (
-            <motion.p 
+            <motion.p
               className="text-gray-600 text-center max-w-xs"
               initial={{ y: 5, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -67,11 +65,11 @@ const RightSidebar = () => {
           )}
         </div>
 
-        <hr className="border-gray-100 my-6 mx-6" />
+        <hr className="border-gray-100 my-4 sm:my-6 mx-4 sm:mx-6" />
 
         {/* Media Section */}
-        <div className="px-6 flex-1 overflow-y-auto">
-          <motion.h3 
+        <div className="px-4 sm:px-6 flex-1 overflow-y-auto">
+          <motion.h3
             className="text-sm font-medium text-gray-700 mb-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -79,7 +77,7 @@ const RightSidebar = () => {
           >
             Shared Media
           </motion.h3>
-          
+
           <AnimatePresence>
             {msgImages.length > 0 ? (
               <motion.div
@@ -96,10 +94,10 @@ const RightSidebar = () => {
                     onClick={() => window.open(url)}
                     className="cursor-pointer rounded-lg overflow-hidden aspect-square bg-gray-100"
                   >
-                    <img 
-                      src={url} 
-                      alt="" 
-                      className="w-full h-full object-cover transition-all hover:opacity-90" 
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover transition-all hover:opacity-90"
                     />
                   </motion.div>
                 ))}
@@ -111,18 +109,18 @@ const RightSidebar = () => {
                 transition={{ delay: 0.5 }}
                 className="flex flex-col items-center justify-center py-8 text-gray-400"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-10 w-10 mb-2" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-10 w-10 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={1.5} 
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
                 <p className="text-sm">No media shared yet</p>
@@ -132,8 +130,8 @@ const RightSidebar = () => {
         </div>
 
         {/* Logout Button */}
-        <motion.div 
-          className="sticky bottom-0 w-full p-6 bg-white border-t border-gray-100"
+        <motion.div
+          className="sticky bottom-0 w-full p-4 sm:p-6 bg-white border-t border-gray-100"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
@@ -143,16 +141,16 @@ const RightSidebar = () => {
             className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium text-sm py-3 px-4 rounded-lg shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
           >
             Logout
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-5 w-5" 
-              viewBox="0 0 20 20" 
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
               fill="currentColor"
             >
-              <path 
-                fillRule="evenodd" 
-                d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" 
-                clipRule="evenodd" 
+              <path
+                fillRule="evenodd"
+                d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
+                clipRule="evenodd"
               />
             </svg>
           </button>

@@ -57,7 +57,7 @@ const Sidebar = () => {
               className="w-8 h-8 md:w-10 md:h-10"
             />
             <h1 className="text-xl md:text-2xl font-bold text-gray-800">
-              NexText
+              BHH Chat
             </h1>
           </div>
 

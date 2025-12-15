@@ -15,10 +15,13 @@ import {
   FaEllipsisV,
   FaArrowDown,
   FaPaperclip,
+  FaInfoCircle,
 } from "react-icons/fa";
+import { IoCheckmarkDoneOutline } from "react-icons/io5";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
-const ChatContainer = () => {
+const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
   const {
     messages,
     selectedUser,
@@ -26,6 +29,8 @@ const ChatContainer = () => {
     sendMessage,
     getMessages,
     deleteMessage,
+    toggleReaction,
+    users,
   } = useContext(ChatContext);
   const { authUser, onlineUsers } = useContext(AuthContext);
 
@@ -39,6 +44,8 @@ const ChatContainer = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [mobileMenuMsg, setMobileMenuMsg] = useState(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(null);
+  const [hoveredReaction, setHoveredReaction] = useState(null);
 
   const scrollToBottom = useCallback(() => {
     if (messagesContainerRef.current) {
@@ -71,12 +78,9 @@ const ChatContainer = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      await sendMessage({ image: reader.result });
-      e.target.value = "";
-    };
-    reader.readAsDataURL(file);
+    // Send file directly instead of converting to base64
+    await sendMessage({ imageFile: file });
+    e.target.value = "";
   };
 
   const handleDeleteClick = (msg) => {
@@ -95,6 +99,51 @@ const ChatContainer = () => {
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
     setMessageToDelete(null);
+  };
+
+  // Group reactions by emoji
+  const groupReactions = (reactions) => {
+    if (!reactions || reactions.length === 0) return [];
+    const grouped = {};
+    reactions.forEach((reaction) => {
+      if (!grouped[reaction.emoji]) {
+        grouped[reaction.emoji] = [];
+      }
+      grouped[reaction.emoji].push(reaction);
+    });
+    return Object.entries(grouped).map(([emoji, users]) => ({
+      emoji,
+      users,
+      count: users.length,
+    }));
+  };
+
+  // Get user info from userId
+  const getUserInfo = (userId) => {
+    if (String(userId) === String(authUser._id)) {
+      return {
+        fullName: authUser.fullName,
+        profilePic: authUser.profilePic,
+      };
+    }
+    if (String(userId) === String(selectedUser?._id)) {
+      return {
+        fullName: selectedUser.fullName,
+        profilePic: selectedUser.profilePic,
+      };
+    }
+    const user = users.find((u) => String(u._id) === String(userId));
+    return user
+      ? { fullName: user.fullName, profilePic: user.profilePic }
+      : { fullName: "Unknown", profilePic: null };
+  };
+
+  // Quick reaction emojis
+  const quickReactions = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+  const handleReactionClick = async (messageId, emoji) => {
+    await toggleReaction(messageId, emoji);
+    setShowReactionPicker(null);
   };
 
   let longPressTimer = null;
@@ -124,6 +173,21 @@ const ChatContainer = () => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // Close reaction picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        showReactionPicker &&
+        !e.target.closest(".reaction-picker-container") &&
+        !e.target.closest(".reaction-area")
+      ) {
+        setShowReactionPicker(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showReactionPicker]);
+
   if (isLoading && messages.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-50">
@@ -152,24 +216,36 @@ const ChatContainer = () => {
             {onlineUsers.includes(selectedUser._id) ? "Online" : "Offline"}
           </p>
         </div>
-        <button
-          onClick={() => setSelectedUser(null)}
-          className="md:hidden p-2 text-gray-500 hover:text-gray-700"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+        {/* Mobile & Tablet buttons */}
+        <div className="flex items-center gap-2 lg:hidden">
+          {onToggleRightSidebar && (
+            <button
+              onClick={onToggleRightSidebar}
+              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+              title={showRightSidebar ? "Ẩn thông tin" : "Hiện thông tin"}
+            >
+              <FaInfoCircle className="w-5 h-5" />
+            </button>
+          )}
+          <button
+            onClick={() => setSelectedUser(null)}
+            className="p-2 text-gray-500 hover:text-gray-700"
           >
-            <path
-              fillRule="evenodd"
-              d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-        <button className="hidden md:block p-2 text-gray-500 hover:text-gray-700">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+        <button className="hidden lg:block p-2 text-gray-500 hover:text-gray-700">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5"
@@ -223,16 +299,23 @@ const ChatContainer = () => {
                   </div>
                 ) : msg.image ? (
                   <div className="relative group">
-                    <img
-                      src={msg.image}
-                      alt=""
-                      className="max-w-[280px] rounded-lg shadow-sm border border-gray-200"
-                    />
-                    {isSender && (
-                      <div className="absolute -bottom-5 right-0 text-xs text-gray-400">
-                        {msg.seen ? "Seen" : ""}
-                      </div>
-                    )}
+                    <div
+                      className="cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isDeleted) {
+                          setShowReactionPicker(
+                            showReactionPicker === msg._id ? null : msg._id
+                          );
+                        }
+                      }}
+                    >
+                      <img
+                        src={msg.image}
+                        alt=""
+                        className="max-w-[280px] rounded-lg shadow-sm border border-gray-200"
+                      />
+                    </div>
                     {isSender && (
                       <button
                         className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-md text-gray-500 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -249,19 +332,30 @@ const ChatContainer = () => {
                 ) : (
                   <div className="relative group">
                     <div
-                      className={`px-4 py-3 rounded-2xl ${
+                      className={`px-4 py-3 rounded-2xl cursor-pointer ${
                         isSender
                           ? "bg-indigo-600 text-white rounded-br-none"
                           : "bg-white text-gray-800 rounded-bl-none shadow-sm"
                       }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isDeleted) {
+                          setShowReactionPicker(
+                            showReactionPicker === msg._id ? null : msg._id
+                          );
+                        }
+                      }}
                     >
                       <p className="text-sm">{msg.text}</p>
-                    </div>
-                    {isSender && (
-                      <div className="absolute -bottom-5 right-0 text-xs text-gray-400">
-                        {msg.seen ? "Seen" : ""}
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-xs text-gray-400">
+                          {formatMessageTime(msg.createdAt)}
+                        </span>
+                        {isSender && msg.seen ? (
+                          <IoCheckmarkDoneOutline className="text-green-500" />
+                        ) : null}
                       </div>
-                    )}
+                    </div>
                     {isSender && (
                       <button
                         className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow-md text-gray-500 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -276,9 +370,149 @@ const ChatContainer = () => {
                     )}
                   </div>
                 )}
-                <span className="text-xs text-gray-400 mt-1">
-                  {formatMessageTime(msg.createdAt)}
-                </span>
+
+                {/* Reactions */}
+                {!isDeleted && msg.reactions && msg.reactions.length > 0 && (
+                  <div
+                    className="reaction-area mt-1 flex flex-wrap gap-1 relative"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Click vào reaction area (không phải button) để mở picker
+                      if (!e.target.closest("button")) {
+                        setShowReactionPicker(
+                          showReactionPicker === msg._id ? null : msg._id
+                        );
+                      }
+                    }}
+                  >
+                    {groupReactions(msg.reactions).map((reactionGroup, idx) => {
+                      const hasUserReaction = reactionGroup.users.some(
+                        (r) => String(r.userId) === String(authUser._id)
+                      );
+                      const reactionKey = `${msg._id}-${reactionGroup.emoji}`;
+                      const isHovered = hoveredReaction === reactionKey;
+
+                      return (
+                        <div
+                          key={idx}
+                          className="relative"
+                          onMouseEnter={() => setHoveredReaction(reactionKey)}
+                          onMouseLeave={() => setHoveredReaction(null)}
+                        >
+                          <motion.button
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReactionClick(msg._id, reactionGroup.emoji);
+                            }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all ${
+                              hasUserReaction
+                                ? "bg-indigo-100 border border-indigo-300"
+                                : "bg-gray-100 hover:bg-gray-200 border border-gray-200"
+                            }`}
+                          >
+                            <span className="text-sm">
+                              {reactionGroup.emoji}
+                            </span>
+                            <span
+                              className={`text-xs ${
+                                hasUserReaction
+                                  ? "text-indigo-700 font-medium"
+                                  : "text-gray-600"
+                              }`}
+                            >
+                              {reactionGroup.count}
+                            </span>
+                          </motion.button>
+
+                          {/* Reaction Tooltip */}
+                          {isHovered && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 5 }}
+                              className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 min-w-[200px] max-w-[250px]"
+                            >
+                              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                                <span className="text-lg">
+                                  {reactionGroup.emoji}
+                                </span>
+                                <span className="text-xs font-medium text-gray-700">
+                                  {reactionGroup.count}{" "}
+                                  {reactionGroup.count === 1
+                                    ? "reaction"
+                                    : "reactions"}
+                                </span>
+                              </div>
+                              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                                {reactionGroup.users.map((reaction, rIdx) => {
+                                  const userInfo = getUserInfo(reaction.userId);
+                                  const isCurrentUser =
+                                    String(reaction.userId) ===
+                                    String(authUser._id);
+                                  return (
+                                    <div
+                                      key={rIdx}
+                                      className="flex items-center gap-2 text-sm"
+                                    >
+                                      <img
+                                        src={
+                                          userInfo.profilePic ||
+                                          assets.avatar_icon
+                                        }
+                                        alt={userInfo.fullName}
+                                        className="w-6 h-6 rounded-full object-cover"
+                                      />
+                                      <span
+                                        className={`flex-1 ${
+                                          isCurrentUser
+                                            ? "text-indigo-600 font-medium"
+                                            : "text-gray-700"
+                                        }`}
+                                      >
+                                        {isCurrentUser
+                                          ? "You"
+                                          : userInfo.fullName}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Reaction Picker */}
+                {showReactionPicker === msg._id && !isDeleted && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    className={`reaction-picker-container absolute bottom-full mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 flex gap-1 z-50 ${
+                      isSender ? "right-0" : "left-0"
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {quickReactions.map((emoji) => (
+                      <motion.button
+                        key={emoji}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleReactionClick(msg._id, emoji)}
+                        className="w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-100 rounded transition-colors"
+                      >
+                        {emoji}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
               </div>
 
               {isSender && (
@@ -416,7 +650,7 @@ const ChatContainer = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end bg-black/30 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-50 flex items-end bg-black/30 backdrop-blur-sm lg:hidden"
             onClick={() => setShowMobileMenu(false)}
           >
             <motion.div
@@ -448,7 +682,7 @@ const ChatContainer = () => {
       </AnimatePresence>
     </div>
   ) : (
-    <div className="hidden md:flex flex-col items-center justify-center gap-4 h-full bg-gradient-to-br from-indigo-50 to-blue-50">
+    <div className="hidden lg:flex flex-col items-center justify-center gap-4 h-full bg-gradient-to-br from-indigo-50 to-blue-50">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

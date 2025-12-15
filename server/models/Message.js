@@ -20,6 +20,16 @@ const messageSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     seen: { type: Boolean, default: false },
     deleted: { type: Boolean, default: false },
+    reactions: [
+      {
+        emoji: { type: String, required: true },
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

@@ -104,13 +104,24 @@ export const ChatProvider = ({ children }) => {
   const sendMessage = useCallback(
     async (messageData) => {
       try {
+        // Create FormData if image file is provided
+        const formData = new FormData();
+        if (messageData.text) {
+          formData.append("text", messageData.text);
+        }
+        if (messageData.imageFile) {
+          formData.append("image", messageData.imageFile);
+        }
+
         // Optimistically update UI
         const optimisticMessage = {
           _id: Date.now().toString(), // Temporary ID
           sender: authUser._id,
           receiver: selectedUser._id,
           text: messageData.text || "",
-          image: messageData.image || "",
+          image: messageData.imageFile
+            ? URL.createObjectURL(messageData.imageFile)
+            : "",
           createdAt: new Date().toISOString(),
           seen: false,
           deleted: false,
@@ -125,11 +136,24 @@ export const ChatProvider = ({ children }) => {
           ],
         }));
 
-        // Send to server
+        // Send to server with FormData
         const { data } = await axios.post(
           `/api/messages/send/${selectedUser._id}`,
-          messageData
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
         );
+
+        // Clean up object URL
+        if (
+          optimisticMessage.image &&
+          optimisticMessage.image.startsWith("blob:")
+        ) {
+          URL.revokeObjectURL(optimisticMessage.image);
+        }
 
         // Update with real message data
         setMessages((prevMessages) =>
@@ -207,10 +231,30 @@ export const ChatProvider = ({ children }) => {
         return updated;
       });
     });
+    socket.on("messageReactionUpdated", (updatedMessage) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === updatedMessage._id ? updatedMessage : msg
+        )
+      );
+      setMessageCache((prev) => {
+        const updated = { ...prev };
+        if (selectedUser && updated[selectedUser._id]) {
+          updated[selectedUser._id] = updated[selectedUser._id].map((msg) =>
+            msg._id === updatedMessage._id ? updatedMessage : msg
+          );
+        }
+        return updated;
+      });
+    });
   }, [socket, selectedUser, authUser, axios]);
 
   const unsubscribeFromMessages = useCallback(() => {
-    if (socket) socket.off("newMessage");
+    if (socket) {
+      socket.off("newMessage");
+      socket.off("messageDeleted");
+      socket.off("messageReactionUpdated");
+    }
   }, [socket]);
 
   useEffect(() => {
@@ -266,6 +310,38 @@ export const ChatProvider = ({ children }) => {
     [axios, selectedUser]
   );
 
+  const toggleReaction = useCallback(
+    async (messageId, emoji) => {
+      try {
+        const { data } = await axios.post(
+          `/api/messages/reaction/${messageId}`,
+          {
+            emoji,
+          }
+        );
+        if (data.success) {
+          setMessages((prev) =>
+            prev.map((msg) => (msg._id === messageId ? data.message : msg))
+          );
+          setMessageCache((prev) => {
+            const updated = { ...prev };
+            if (selectedUser && updated[selectedUser._id]) {
+              updated[selectedUser._id] = updated[selectedUser._id].map((msg) =>
+                msg._id === messageId ? data.message : msg
+              );
+            }
+            return updated;
+          });
+        }
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message || "Failed to toggle reaction"
+        );
+      }
+    },
+    [axios, selectedUser]
+  );
+
   const value = {
     messages,
     users,
@@ -277,6 +353,7 @@ export const ChatProvider = ({ children }) => {
     unseenMessages,
     setUnseenMessages,
     deleteMessage,
+    toggleReaction,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
