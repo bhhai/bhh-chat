@@ -5,11 +5,64 @@ import { AuthContext } from "../context/AuthContext";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import { formatLastActive } from "../lib/utils";
+import { FaCheck } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 const RightSidebar = () => {
   const { selectedUser, messages } = useContext(ChatContext);
-  const { logout, onlineUsers } = useContext(AuthContext);
+  const {
+    logout,
+    onlineUsers,
+    authUser,
+    updateChatBackground,
+    updateChatBackgroundImage,
+  } = useContext(AuthContext);
   const [msgImages, setMsgImages] = useState([]);
+  const [selectedBackgroundImage, setSelectedBackgroundImage] = useState(null);
+
+  // Background options
+  const backgroundOptions = [
+    {
+      id: "gradient-indigo-blue",
+      name: "Default",
+      className: "bg-gradient-to-br from-indigo-50 to-blue-50",
+    },
+    {
+      id: "gradient-purple-pink",
+      name: "Purple Pink",
+      className: "bg-gradient-to-br from-purple-50 to-pink-50",
+    },
+    {
+      id: "gradient-green-blue",
+      name: "Green Blue",
+      className: "bg-gradient-to-br from-green-50 to-blue-50",
+    },
+    {
+      id: "gradient-orange-red",
+      name: "Orange Red",
+      className: "bg-gradient-to-br from-orange-50 to-red-50",
+    },
+    {
+      id: "gradient-yellow-orange",
+      name: "Yellow Orange",
+      className: "bg-gradient-to-br from-yellow-50 to-orange-50",
+    },
+    {
+      id: "solid-white",
+      name: "White",
+      className: "bg-white",
+    },
+    {
+      id: "solid-gray",
+      name: "Gray",
+      className: "bg-gray-50",
+    },
+    {
+      id: "solid-blue",
+      name: "Blue",
+      className: "bg-blue-50",
+    },
+  ];
 
   useEffect(() => {
     setMsgImages(messages.filter((msg) => msg.image).map((msg) => msg.image));
@@ -82,13 +135,158 @@ const RightSidebar = () => {
 
         <hr className="border-gray-100 my-4 sm:my-6 mx-4 sm:mx-6" />
 
+        {/* Chat Background Section */}
+        <div className="px-4 sm:px-6">
+          <motion.h3
+            className="text-sm font-medium text-gray-700 mb-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+          >
+            Chat Background
+          </motion.h3>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="grid grid-cols-4 gap-2 mb-4"
+          >
+            {backgroundOptions.map((bg) => (
+              <motion.button
+                key={bg.id}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  updateChatBackground(bg.id);
+                  setSelectedBackgroundImage(null);
+                }}
+                className={`relative h-12 rounded-lg border-2 transition-all ${
+                  authUser?.chatBackground === bg.id &&
+                  !authUser?.chatBackground?.startsWith("http")
+                    ? "border-blue-500 shadow-md"
+                    : "border-gray-200 hover:border-gray-300"
+                } ${bg.className}`}
+                title={bg.name}
+              >
+                {authUser?.chatBackground === bg.id &&
+                  !authUser?.chatBackground?.startsWith("http") && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center"
+                    >
+                      <FaCheck className="w-3 h-3 text-white" />
+                    </motion.div>
+                  )}
+              </motion.button>
+            ))}
+          </motion.div>
+
+          {/* Upload Image Option */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className="mb-4"
+          >
+            <label
+              htmlFor="background-image-upload"
+              className="block w-full cursor-pointer"
+            >
+              <div
+                className={`relative h-12 rounded-lg border-2 transition-all flex items-center justify-center ${
+                  authUser?.chatBackground?.startsWith("http")
+                    ? "border-blue-500 shadow-md bg-gray-50"
+                    : "border-gray-200 hover:border-gray-300 bg-gray-50"
+                }`}
+              >
+                {selectedBackgroundImage ? (
+                  <>
+                    <img
+                      src={URL.createObjectURL(selectedBackgroundImage)}
+                      alt="Preview"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    {authUser?.chatBackground?.startsWith("http") && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center"
+                      >
+                        <FaCheck className="w-3 h-3 text-white" />
+                      </motion.div>
+                    )}
+                  </>
+                ) : authUser?.chatBackground?.startsWith("http") ? (
+                  <>
+                    <img
+                      src={authUser.chatBackground}
+                      alt="Current background"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center"
+                    >
+                      <FaCheck className="w-3 h-3 text-white" />
+                    </motion.div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-gray-500 text-xs">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 mb-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <span>Upload Image</span>
+                  </div>
+                )}
+              </div>
+              <input
+                id="background-image-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    if (!file.type.startsWith("image/")) {
+                      toast.error("Please select an image file");
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("Image size should be less than 5MB");
+                      return;
+                    }
+                    setSelectedBackgroundImage(file);
+                    updateChatBackgroundImage(file);
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </motion.div>
+        </div>
+
+        <hr className="border-gray-100 my-4 sm:my-6 mx-4 sm:mx-6" />
+
         {/* Media Section */}
         <div className="px-4 sm:px-6 flex-1 overflow-y-auto">
           <motion.h3
             className="text-sm font-medium text-gray-700 mb-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.45 }}
           >
             Shared Media
           </motion.h3>

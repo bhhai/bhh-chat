@@ -70,13 +70,16 @@ export const checkAuth = (req, res) => {
  */
 export const updateProfile = async (req, res) => {
   try {
-    const { profilePic, bio, fullName } = req.body;
+    const { profilePic, bio, fullName, chatBackground, chatBackgroundImage } =
+      req.body;
     const userId = req.user._id;
 
     const updatedUser = await updateUserProfile(userId, {
       profilePic,
       bio,
       fullName,
+      chatBackground,
+      chatBackgroundImage,
     });
 
     res.json({

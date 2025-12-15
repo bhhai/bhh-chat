@@ -76,9 +76,26 @@ export const loginUser = async (email, password) => {
  * @returns {Promise<Object>} - Returns updated user object
  */
 export const updateUserProfile = async (userId, updateData) => {
-  const { profilePic, bio, fullName } = updateData;
+  const { profilePic, bio, fullName, chatBackground, chatBackgroundImage } =
+    updateData;
 
   let dataToUpdate = { bio, fullName };
+
+  // Add chatBackground if provided (preset or image URL)
+  if (chatBackground !== undefined) {
+    dataToUpdate.chatBackground = chatBackground;
+  }
+
+  // Upload chat background image to cloudinary if provided
+  if (chatBackgroundImage) {
+    const uploadResponse = await cloudinary.uploader.upload(
+      chatBackgroundImage,
+      {
+        folder: "chat-backgrounds",
+      }
+    );
+    dataToUpdate.chatBackground = uploadResponse.secure_url;
+  }
 
   // Upload profile picture to cloudinary if provided
   if (profilePic) {

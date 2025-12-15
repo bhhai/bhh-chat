@@ -1,7 +1,7 @@
-import { createContext, useEffect, useState } from 'react';
-import axios from 'axios';
-import toast from 'react-hot-toast';
-import { io } from 'socket.io-client';
+import { createContext, useEffect, useState } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { io } from "socket.io-client";
 
 export const AuthContext = createContext();
 
@@ -9,14 +9,14 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL;
 axios.defaults.baseURL = backendUrl;
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(localStorage.getItem("token"));
   const [authUser, setAuthUser] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [socket, setSocket] = useState(null);
 
   const checkAuth = async () => {
     try {
-      const { data } = await axios.get('/api/auth/check');
+      const { data } = await axios.get("/api/auth/check");
       if (data.success) {
         setAuthUser(data.user);
         connectSocket(data.user);
@@ -24,20 +24,20 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       if (error.response?.status === 401) {
         console.log(
-          'Not authenticated or token expired. Redirecting to login.'
+          "Not authenticated or token expired. Redirecting to login."
         );
         setAuthUser(null);
-        localStorage.removeItem('token');
+        localStorage.removeItem("token");
         setToken(null);
       } else {
         console.error(
-          'Check Auth Error:',
+          "Check Auth Error:",
           error.response?.data?.message || error.message
         );
         toast.error(
           error.response?.data?.message ||
             error.message ||
-            'Authentication check failed.'
+            "Authentication check failed."
         );
       }
     }
@@ -49,46 +49,93 @@ export const AuthProvider = ({ children }) => {
       if (data.success) {
         setAuthUser(data.userData);
         connectSocket(data.userData);
-        axios.defaults.headers.common['token'] = data.token;
+        axios.defaults.headers.common["token"] = data.token;
         setToken(data.token);
-        localStorage.setItem('token', data.token);
+        localStorage.setItem("token", data.token);
         toast.success(data.message);
         return { success: true, userData: data.userData };
       } else {
-        toast.error(data.message || 'Login failed.');
+        toast.error(data.message || "Login failed.");
       }
     } catch (error) {
       toast.error(
-        error.response?.data?.message || error.message || 'Login failed.'
+        error.response?.data?.message || error.message || "Login failed."
       );
     }
   };
 
   const logout = async () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     setToken(null);
     setAuthUser(null);
     setOnlineUsers([]);
-    delete axios.defaults.headers.common['token'];
-    toast.success('User logged out successfully');
+    delete axios.defaults.headers.common["token"];
+    toast.success("User logged out successfully");
     socket?.disconnect();
     setSocket(null);
   };
 
   const updateProfile = async (body) => {
     try {
-      const { data } = await axios.put('/api/auth/update-profile', body);
+      const { data } = await axios.put("/api/auth/update-profile", body);
       if (data.success) {
         setAuthUser(data.user);
-        toast.success('User profile updated successfully');
+        toast.success("User profile updated successfully");
       } else {
-        toast.error(data.message || 'Profile update failed.');
+        toast.error(data.message || "Profile update failed.");
       }
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
           error.message ||
-          'Profile update failed.'
+          "Profile update failed."
+      );
+    }
+  };
+
+  const updateChatBackground = async (chatBackground) => {
+    try {
+      const { data } = await axios.put("/api/auth/update-profile", {
+        chatBackground,
+      });
+      if (data.success) {
+        setAuthUser(data.user);
+        toast.success("Chat background updated successfully");
+      } else {
+        toast.error(data.message || "Failed to update chat background.");
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update chat background."
+      );
+    }
+  };
+
+  const updateChatBackgroundImage = async (imageFile) => {
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(imageFile);
+      reader.onload = async () => {
+        const base64Image = reader.result;
+        const { data } = await axios.put("/api/auth/update-profile", {
+          chatBackgroundImage: base64Image,
+        });
+        if (data.success) {
+          setAuthUser(data.user);
+          toast.success("Chat background image updated successfully");
+        } else {
+          toast.error(
+            data.message || "Failed to update chat background image."
+          );
+        }
+      };
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update chat background image."
       );
     }
   };
@@ -101,14 +148,14 @@ export const AuthProvider = ({ children }) => {
     });
 
     setSocket(newSocket);
-    newSocket.on('getOnlineUsers', (userIds) => {
+    newSocket.on("getOnlineUsers", (userIds) => {
       setOnlineUsers(userIds);
     });
   };
 
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common['token'] = token;
+      axios.defaults.headers.common["token"] = token;
       checkAuth();
     } else {
       setAuthUser(null);
@@ -133,6 +180,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateProfile,
+    updateChatBackground,
+    updateChatBackgroundImage,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
