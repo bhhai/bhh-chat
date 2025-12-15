@@ -56,26 +56,73 @@ export const getUsersForSidebar = async (userId) => {
 };
 
 /**
- * Service to get all messages between two users
+ * Service to get all messages between two users with pagination
  * @param {string} myId - Current user ID
  * @param {string} selectedUserId - Selected user ID
- * @returns {Promise<Array>} - Returns array of messages
+ * @param {number} page - Page number (default: 1)
+ * @param {number} limit - Number of messages per page (default: 50)
+ * @returns {Promise<Object>} - Returns object with messages, total, page, limit, hasMore
  */
-export const getMessages = async (myId, selectedUserId) => {
-  const messages = await Message.find({
+export const getMessages = async (
+  myId,
+  selectedUserId,
+  page = 1,
+  limit = 50
+) => {
+  const skip = (page - 1) * limit;
+
+  const query = {
     $or: [
       { sender: myId, receiver: selectedUserId },
       { sender: selectedUserId, receiver: myId },
     ],
-  });
+  };
 
-  // Mark messages as seen
-  await Message.updateMany(
-    { sender: selectedUserId, receiver: myId },
-    { seen: true }
-  );
+  // Get total count
+  const total = await Message.countDocuments(query);
 
-  return messages;
+  // Get messages with pagination, sorted by createdAt descending (newest first)
+  const messages = await Message.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  // Mark messages as seen (only for first page)
+  if (page === 1) {
+    await Message.updateMany(
+      { sender: selectedUserId, receiver: myId, seen: false },
+      { seen: true }
+    );
+  }
+
+  const hasMore = skip + messages.length < total;
+
+  return {
+    messages,
+    total,
+    page,
+    limit,
+    hasMore,
+  };
+};
+
+/**
+ * Service to get message by ID
+ * @param {string} messageId - Message ID
+ * @returns {Promise<Object>} - Returns message object
+ */
+export const getMessageById = async (messageId) => {
+  const message = await Message.findById(messageId)
+    .populate("sender", "fullName profilePic")
+    .populate("receiver", "fullName profilePic")
+    .lean();
+
+  if (!message) {
+    throw new Error("Message not found");
+  }
+
+  return message;
 };
 
 /**

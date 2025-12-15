@@ -5,84 +5,33 @@ import {
   useState,
   useCallback,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "./AuthContext";
 import { toast } from "react-hot-toast";
 
 export const ChatContext = createContext();
 
 export const ChatProvider = ({ children }) => {
-  const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [unseenMessages, setUnseenMessages] = useState({});
-  const [messageCache, setMessageCache] = useState({});
   const { socket, axios, authUser } = useContext(AuthContext);
+  const queryClient = useQueryClient();
 
-  const getMessages = useCallback(
-    async (userId) => {
+  const getMessageDetail = useCallback(
+    async (messageId) => {
       try {
-        // Immediately show cached messages if available
-        if (messageCache[userId]) {
-          setMessages(messageCache[userId]);
-          // Update unseen messages count
-          setUnseenMessages((prev) => ({
-            ...prev,
-            [userId]: 0,
-          }));
-          return;
-        }
-
-        // If no cache, show empty array and fetch in background
-        setMessages([]);
-        const { data } = await axios.get(`/api/messages/${userId}`);
+        const { data } = await axios.get(`/api/messages/detail/${messageId}`);
         if (data.success) {
-          const sortedMessages = data.messages.sort(
-            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-          );
-          setMessages(sortedMessages);
-          setMessageCache((prev) => ({
-            ...prev,
-            [userId]: sortedMessages,
-          }));
-          setUnseenMessages((prev) => ({
-            ...prev,
-            [userId]: 0,
-          }));
+          return data.message;
         }
+        return null;
       } catch (error) {
-        toast.error(error.message);
+        toast.error(error.message || "Failed to get message detail");
+        return null;
       }
     },
-    [axios, messageCache]
-  );
-
-  // Prefetch messages for all users
-  const prefetchMessages = useCallback(
-    async (users) => {
-      const prefetchPromises = users.map(async (user) => {
-        if (!messageCache[user._id]) {
-          try {
-            const { data } = await axios.get(`/api/messages/${user._id}`);
-            if (data.success) {
-              const sortedMessages = data.messages.sort(
-                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-              );
-              setMessageCache((prev) => ({
-                ...prev,
-                [user._id]: sortedMessages,
-              }));
-            }
-          } catch (error) {
-            console.error(
-              `Failed to prefetch messages for user ${user._id}:`,
-              error
-            );
-          }
-        }
-      });
-      await Promise.all(prefetchPromises);
-    },
-    [axios, messageCache]
+    [axios]
   );
 
   const getUsers = useCallback(async () => {
@@ -93,13 +42,11 @@ export const ChatProvider = ({ children }) => {
         if (data.unseenMessages) {
           setUnseenMessages(data.unseenMessages);
         }
-        // Prefetch messages for all users in the background
-        prefetchMessages(data.users);
       }
     } catch (error) {
       toast.error(error.message);
     }
-  }, [axios, prefetchMessages]);
+  }, [axios]);
 
   const sendMessage = useCallback(
     async (messageData) => {
@@ -113,29 +60,6 @@ export const ChatProvider = ({ children }) => {
           formData.append("image", messageData.imageFile);
         }
 
-        // Optimistically update UI
-        const optimisticMessage = {
-          _id: Date.now().toString(), // Temporary ID
-          sender: authUser._id,
-          receiver: selectedUser._id,
-          text: messageData.text || "",
-          image: messageData.imageFile
-            ? URL.createObjectURL(messageData.imageFile)
-            : "",
-          createdAt: new Date().toISOString(),
-          seen: false,
-          deleted: false,
-        };
-
-        setMessages((prevMessages) => [optimisticMessage, ...prevMessages]);
-        setMessageCache((prev) => ({
-          ...prev,
-          [selectedUser._id]: [
-            optimisticMessage,
-            ...(prev[selectedUser._id] || []),
-          ],
-        }));
-
         // Send to server with FormData
         const { data } = await axios.post(
           `/api/messages/send/${selectedUser._id}`,
@@ -147,53 +71,27 @@ export const ChatProvider = ({ children }) => {
           }
         );
 
-        // Clean up object URL
-        if (
-          optimisticMessage.image &&
-          optimisticMessage.image.startsWith("blob:")
-        ) {
-          URL.revokeObjectURL(optimisticMessage.image);
+        if (data.success && selectedUser) {
+          // Invalidate messages query to refetch and show new message
+          queryClient.invalidateQueries({
+            queryKey: ["messages", selectedUser._id],
+          });
         }
-
-        // Update with real message data
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg._id === optimisticMessage._id ? data : msg
-          )
-        );
-        setMessageCache((prev) => ({
-          ...prev,
-          [selectedUser._id]: prev[selectedUser._id].map((msg) =>
-            msg._id === optimisticMessage._id ? data : msg
-          ),
-        }));
       } catch (error) {
-        // Revert optimistic update on error
-        setMessages((prevMessages) =>
-          prevMessages.filter((msg) => msg._id !== Date.now().toString())
-        );
-        setMessageCache((prev) => ({
-          ...prev,
-          [selectedUser._id]: prev[selectedUser._id].filter(
-            (msg) => msg._id !== Date.now().toString()
-          ),
-        }));
         toast.error(error.response?.data?.message || "Failed to send message");
       }
     },
-    [axios, selectedUser, authUser]
+    [axios, selectedUser, queryClient]
   );
 
   const subscribeToMessages = useCallback(() => {
     if (!socket) return;
     socket.on("newMessage", (newMessage) => {
       if (selectedUser && newMessage.sender === selectedUser._id) {
-        setMessages((prevMessages) => [newMessage, ...prevMessages]);
-        // Update cache
-        setMessageCache((prev) => ({
-          ...prev,
-          [selectedUser._id]: [newMessage, ...(prev[selectedUser._id] || [])],
-        }));
+        // Invalidate and refetch messages for current conversation
+        queryClient.invalidateQueries({
+          queryKey: ["messages", selectedUser._id],
+        });
         axios.put(`/api/messages/mark/${newMessage._id}`);
         setUnseenMessages((prev) => ({
           ...prev,
@@ -204,12 +102,10 @@ export const ChatProvider = ({ children }) => {
         newMessage.sender === authUser._id &&
         newMessage.receiver === selectedUser._id
       ) {
-        setMessages((prevMessages) => [newMessage, ...prevMessages]);
-        // Update cache
-        setMessageCache((prev) => ({
-          ...prev,
-          [selectedUser._id]: [newMessage, ...(prev[selectedUser._id] || [])],
-        }));
+        // Invalidate and refetch messages for current conversation
+        queryClient.invalidateQueries({
+          queryKey: ["messages", selectedUser._id],
+        });
       } else {
         setUnseenMessages((prevUnseenMessages) => ({
           ...prevUnseenMessages,
@@ -218,36 +114,26 @@ export const ChatProvider = ({ children }) => {
       }
     });
     socket.on("messageDeleted", (deletedMsg) => {
-      setMessages((prev) =>
-        prev.map((msg) => (msg._id === deletedMsg._id ? deletedMsg : msg))
-      );
-      setMessageCache((prev) => {
-        const updated = { ...prev };
-        if (selectedUser && updated[selectedUser._id]) {
-          updated[selectedUser._id] = updated[selectedUser._id].map((msg) =>
-            msg._id === deletedMsg._id ? deletedMsg : msg
-          );
-        }
-        return updated;
+      // Invalidate messages query for the conversation
+      const conversationUserId =
+        deletedMsg.sender === authUser._id
+          ? deletedMsg.receiver
+          : deletedMsg.sender;
+      queryClient.invalidateQueries({
+        queryKey: ["messages", conversationUserId],
       });
     });
     socket.on("messageReactionUpdated", (updatedMessage) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === updatedMessage._id ? updatedMessage : msg
-        )
-      );
-      setMessageCache((prev) => {
-        const updated = { ...prev };
-        if (selectedUser && updated[selectedUser._id]) {
-          updated[selectedUser._id] = updated[selectedUser._id].map((msg) =>
-            msg._id === updatedMessage._id ? updatedMessage : msg
-          );
-        }
-        return updated;
+      // Invalidate messages query for the conversation
+      const conversationUserId =
+        updatedMessage.sender === authUser._id
+          ? updatedMessage.receiver
+          : updatedMessage.sender;
+      queryClient.invalidateQueries({
+        queryKey: ["messages", conversationUserId],
       });
     });
-  }, [socket, selectedUser, authUser, axios]);
+  }, [socket, selectedUser, authUser, axios, queryClient]);
 
   const unsubscribeFromMessages = useCallback(() => {
     if (socket) {
@@ -261,12 +147,6 @@ export const ChatProvider = ({ children }) => {
     subscribeToMessages();
     return () => unsubscribeFromMessages();
   }, [subscribeToMessages, unsubscribeFromMessages]);
-
-  useEffect(() => {
-    if (!selectedUser) {
-      setMessages([]);
-    }
-  }, [selectedUser]);
 
   // Update selectedUser when users list is refreshed (to get updated lastActive)
   useEffect(() => {
@@ -291,44 +171,21 @@ export const ChatProvider = ({ children }) => {
 
   const deleteMessage = useCallback(
     async (messageId) => {
-      // Optimistically update message in state and cache
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === messageId
-            ? {
-                ...msg,
-                text: "This message was deleted",
-                deleted: true,
-                image: "",
-              }
-            : msg
-        )
-      );
-      setMessageCache((prev) => {
-        const updated = { ...prev };
-        if (selectedUser && updated[selectedUser._id]) {
-          updated[selectedUser._id] = updated[selectedUser._id].map((msg) =>
-            msg._id === messageId
-              ? {
-                  ...msg,
-                  text: "This message was deleted",
-                  deleted: true,
-                  image: "",
-                }
-              : msg
-          );
-        }
-        return updated;
-      });
       try {
         await axios.delete(`/api/messages/${messageId}`);
+        // Invalidate messages query to refetch
+        if (selectedUser) {
+          queryClient.invalidateQueries({
+            queryKey: ["messages", selectedUser._id],
+          });
+        }
       } catch (error) {
         toast.error(
           error.response?.data?.message || "Failed to delete message"
         );
       }
     },
-    [axios, selectedUser]
+    [axios, selectedUser, queryClient]
   );
 
   const toggleReaction = useCallback(
@@ -340,18 +197,10 @@ export const ChatProvider = ({ children }) => {
             emoji,
           }
         );
-        if (data.success) {
-          setMessages((prev) =>
-            prev.map((msg) => (msg._id === messageId ? data.message : msg))
-          );
-          setMessageCache((prev) => {
-            const updated = { ...prev };
-            if (selectedUser && updated[selectedUser._id]) {
-              updated[selectedUser._id] = updated[selectedUser._id].map((msg) =>
-                msg._id === messageId ? data.message : msg
-              );
-            }
-            return updated;
+        if (data.success && selectedUser) {
+          // Invalidate messages query to refetch
+          queryClient.invalidateQueries({
+            queryKey: ["messages", selectedUser._id],
           });
         }
       } catch (error) {
@@ -360,15 +209,14 @@ export const ChatProvider = ({ children }) => {
         );
       }
     },
-    [axios, selectedUser]
+    [axios, selectedUser, queryClient]
   );
 
   const value = {
-    messages,
     users,
     selectedUser,
     getUsers,
-    getMessages,
+    getMessageDetail,
     sendMessage,
     setSelectedUser,
     unseenMessages,

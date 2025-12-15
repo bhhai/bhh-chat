@@ -5,6 +5,7 @@ import {
   sendMessage as sendMessageService,
   deleteMessage as deleteMessageService,
   toggleReaction as toggleReactionService,
+  getMessageById as getMessageByIdService,
 } from "../services/messageService.js";
 import { io, userSocketMap } from "../server.js";
 import { uploadImage } from "../middleware/upload.js";
@@ -32,17 +33,44 @@ export const getUsersForSidebar = async (req, res) => {
 };
 
 /**
- * Controller to get all messages for selected user
+ * Controller to get all messages for selected user with pagination
  */
 export const getMessages = async (req, res) => {
   try {
     const { id: selectedUserId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
     const myId = req.user._id;
-    const messages = await getMessagesService(myId, selectedUserId);
+    const result = await getMessagesService(myId, selectedUserId, page, limit);
 
     res.json({
       success: true,
-      messages,
+      messages: result.messages,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      hasMore: result.hasMore,
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Controller to get message by ID
+ */
+export const getMessageDetail = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const message = await getMessageByIdService(messageId);
+
+    res.json({
+      success: true,
+      message,
     });
   } catch (error) {
     console.log(error.message);

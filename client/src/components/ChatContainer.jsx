@@ -4,12 +4,14 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useMemo,
 } from "react";
 import toast from "react-hot-toast";
 import assets from "../assets/assets";
 import { formatMessageTime, formatLastActive } from "../lib/utils";
 import { ChatContext } from "../context/ChatContext";
 import { AuthContext } from "../context/AuthContext";
+import { useMessages } from "../hooks/useMessages";
 import {
   FaTrashAlt,
   FaEllipsisV,
@@ -23,16 +25,30 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
   const {
-    messages,
     selectedUser,
     setSelectedUser,
     sendMessage,
-    getMessages,
+    getMessageDetail,
     deleteMessage,
     toggleReaction,
     users,
   } = useContext(ChatContext);
   const { authUser, onlineUsers } = useContext(AuthContext);
+
+  // Use TanStack Query for messages
+  const {
+    data: messagesData,
+    isLoading: isLoadingMessages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useMessages(selectedUser?._id);
+
+  // Flatten messages from all pages
+  const messages = useMemo(() => {
+    if (!messagesData?.pages) return [];
+    return messagesData.pages.flatMap((page) => page.messages);
+  }, [messagesData]);
 
   // Background options mapping
   const getBackgroundClass = (backgroundId) => {
@@ -80,10 +96,10 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
       }
     : {};
 
-  const scrollEnd = useRef();
   const messagesContainerRef = useRef();
+  const hasTriggeredLoadMore = useRef(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [showDropdown, setShowDropdown] = useState(null);
@@ -92,6 +108,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [hoveredReaction, setHoveredReaction] = useState(null);
+  const [selectedMessageDetail, setSelectedMessageDetail] = useState(null);
 
   const scrollToBottom = useCallback(() => {
     if (messagesContainerRef.current) {
@@ -103,11 +120,42 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
   }, []);
 
   const handleScroll = useCallback(() => {
-    if (messagesContainerRef.current) {
-      const { scrollTop } = messagesContainerRef.current;
-      setShowScrollButton(scrollTop > 100);
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container; // With flex-col-reverse, bottom is scrollTop = 0
+    const SCROLL_THRESHOLD = -100;
+    setShowScrollButton(scrollTop < SCROLL_THRESHOLD);
+
+    if (!hasNextPage || isFetchingNextPage || isLoadingMore) {
+      return;
     }
-  }, []);
+
+    const point = clientHeight - scrollHeight;
+    const isAtTop = point === scrollTop;
+
+    if (isAtTop && !hasTriggeredLoadMore.current) {
+      hasTriggeredLoadMore.current = true;
+      setIsLoadingMore(true);
+      fetchNextPage()
+        .then(() => {
+          // Reset flag after fetch completes to allow loading next page
+          setTimeout(() => {
+            hasTriggeredLoadMore.current = false;
+            setIsLoadingMore(false);
+          }, 300);
+        })
+        .catch(() => {
+          // Reset flag on error too
+          hasTriggeredLoadMore.current = false;
+          setIsLoadingMore(false);
+        });
+    } else if (!isAtTop) {
+      // Reset flag when user scrolls away from top (allows retry)
+      hasTriggeredLoadMore.current = false;
+      setIsLoadingMore(false);
+    }
+  }, [hasNextPage, isFetchingNextPage, isLoadingMore, fetchNextPage]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -192,6 +240,13 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     setShowReactionPicker(null);
   };
 
+  const handleMessageClick = async (messageId) => {
+    const detail = await getMessageDetail(messageId);
+    if (detail) {
+      setSelectedMessageDetail(detail);
+    }
+  };
+
   let longPressTimer = null;
   const handleTouchStart = (msg) => {
     longPressTimer = setTimeout(() => {
@@ -203,21 +258,12 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     clearTimeout(longPressTimer);
   };
 
+  // Reset trigger flag and loading state when user changes
   useEffect(() => {
-    if (selectedUser) {
-      setIsLoading(true);
-      getMessages(selectedUser._id).finally(() => {
-        setTimeout(() => {
-          setIsLoading(false);
-          scrollToBottom();
-        }, 50);
-      });
-    }
-  }, [selectedUser, getMessages, scrollToBottom]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    hasTriggeredLoadMore.current = false;
+    setIsLoadingMore(false);
+    setShowScrollButton(false);
+  }, [selectedUser?._id]);
 
   // Close reaction picker when clicking outside
   useEffect(() => {
@@ -234,7 +280,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showReactionPicker]);
 
-  if (isLoading && messages.length === 0) {
+  if (isLoadingMessages && messages.length === 0) {
     return (
       <div
         className={`h-full flex items-center justify-center ${chatBackgroundClass}`}
@@ -360,6 +406,12 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (!isDeleted) {
+                          handleMessageClick(msg._id);
+                        }
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        if (!isDeleted) {
                           setShowReactionPicker(
                             showReactionPicker === msg._id ? null : msg._id
                           );
@@ -394,6 +446,12 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
                           : "bg-white text-gray-800 rounded-bl-none shadow-sm"
                       }`}
                       onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isDeleted) {
+                          handleMessageClick(msg._id);
+                        }
+                      }}
+                      onDoubleClick={(e) => {
                         e.stopPropagation();
                         if (!isDeleted) {
                           setShowReactionPicker(
@@ -597,7 +655,16 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
             </motion.div>
           );
         })}
-        <div ref={scrollEnd} />
+
+        {/* Loading More Indicator - shown at top when loading older messages */}
+        {(isLoadingMore || isFetchingNextPage) && (
+          <div className="flex flex-col items-center justify-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
+            <p className="mt-2 text-sm text-gray-500">
+              Loading older messages...
+            </p>
+          </div>
+        )}
 
         {showScrollButton && (
           <motion.button
@@ -732,6 +799,107 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
               >
                 Cancel
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Message Detail Modal */}
+      <AnimatePresence>
+        {selectedMessageDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setSelectedMessageDetail(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Message Details
+                </h3>
+                <button
+                  onClick={() => setSelectedMessageDetail(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                {selectedMessageDetail.image && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Image
+                    </label>
+                    <img
+                      src={selectedMessageDetail.image}
+                      alt="Message"
+                      className="mt-2 rounded-lg max-w-full"
+                    />
+                  </div>
+                )}
+                {selectedMessageDetail.text && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Message
+                    </label>
+                    <p className="mt-2 text-gray-800">
+                      {selectedMessageDetail.text}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Sent At
+                  </label>
+                  <p className="mt-2 text-gray-600">
+                    {new Date(selectedMessageDetail.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                {selectedMessageDetail.reactions &&
+                  selectedMessageDetail.reactions.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Reactions
+                      </label>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {groupReactions(selectedMessageDetail.reactions).map(
+                          (reaction) => (
+                            <div
+                              key={reaction.emoji}
+                              className="flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1"
+                            >
+                              <span>{reaction.emoji}</span>
+                              <span className="text-sm text-gray-600">
+                                {reaction.count}
+                              </span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+              </div>
             </motion.div>
           </motion.div>
         )}

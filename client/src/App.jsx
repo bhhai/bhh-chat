@@ -20,6 +20,10 @@ const App = () => {
           element={authUser ? <HomePage /> : <Navigate to="/login" />}
         />
         <Route
+          path="/chat/:userId"
+          element={authUser ? <HomePage /> : <Navigate to="/login" />}
+        />
+        <Route
           path="/login"
           element={!authUser ? <LoginPage /> : <Navigate to="/" />}
         />

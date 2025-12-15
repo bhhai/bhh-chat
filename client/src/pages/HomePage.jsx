@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import ChatContainer from "../components/ChatContainer";
 import RightSidebar from "../components/RightSidebar";
@@ -8,8 +9,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaInfoCircle, FaTimes, FaArrowLeft } from "react-icons/fa";
 
 const HomePage = () => {
-  const { selectedUser } = useContext(ChatContext);
+  const { userId } = useParams();
+  const navigate = useNavigate();
+  const { selectedUser, setSelectedUser, users } = useContext(ChatContext);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
+
+  // Set selectedUser based on URL params
+  useEffect(() => {
+    if (userId) {
+      const user = users.find((u) => u._id === userId);
+      if (user && selectedUser?._id !== userId) {
+        setSelectedUser(user);
+      } else if (!user && users.length > 0) {
+        // User not found, redirect to home
+        navigate("/");
+      }
+    } else {
+      // No userId in URL, clear selectedUser
+      if (selectedUser) {
+        setSelectedUser(null);
+      }
+    }
+  }, [userId, users, selectedUser, setSelectedUser, navigate]);
 
   // Reset right sidebar when selectedUser changes
   useEffect(() => {
@@ -26,7 +47,7 @@ const HomePage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className={`w-full h-full bg-white rounded-none lg:rounded-xl shadow-sm overflow-hidden grid grid-cols-1 relative
+        className={`w-full h-full bg-white rounded-none lg:rounded-xl shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-[350px_1fr] relative
           ${
             selectedUser
               ? "fixed inset-0 lg:static lg:rounded-xl lg:h-full"

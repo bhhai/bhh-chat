@@ -8,11 +8,13 @@ import {
   sendMessage,
   deleteMessage,
   toggleReaction,
+  getMessageDetail,
 } from "../controllers/messageController.js";
 
 const messageRouter = express.Router();
 
 messageRouter.get("/users", protectRoute, getUsersForSidebar);
+messageRouter.get("/detail/:id", protectRoute, getMessageDetail);
 messageRouter.get("/:id", protectRoute, getMessages);
 messageRouter.put("/mark/:id", protectRoute, markMessagesAsSeen);
 messageRouter.post(
