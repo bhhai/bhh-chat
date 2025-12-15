@@ -76,17 +76,54 @@ export const loginUser = async (email, password) => {
  * @returns {Promise<Object>} - Returns updated user object
  */
 export const updateUserProfile = async (userId, updateData) => {
-  const { profilePic, bio, fullName, chatBackground, chatBackgroundImage } =
-    updateData;
+  const {
+    profilePic,
+    bio,
+    fullName,
+    chatBackground,
+    chatBackgroundImage,
+    conversationUserId,
+    chatTheme,
+    chatThemeImage,
+  } = updateData;
 
   let dataToUpdate = { bio, fullName };
 
-  // Add chatBackground if provided (preset or image URL)
+  // Handle chat theme for specific conversation
+  if (conversationUserId && (chatTheme !== undefined || chatThemeImage)) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get existing themes (Map or object)
+    let themes = user.chatThemes;
+    if (!themes) {
+      themes = new Map();
+    } else if (!(themes instanceof Map)) {
+      // Convert object to Map if needed
+      themes = new Map(Object.entries(themes));
+    }
+
+    // Upload chat theme image to cloudinary if provided
+    if (chatThemeImage) {
+      const uploadResponse = await cloudinary.uploader.upload(chatThemeImage, {
+        folder: "chat-backgrounds",
+      });
+      themes.set(conversationUserId, uploadResponse.secure_url);
+    } else if (chatTheme !== undefined) {
+      themes.set(conversationUserId, chatTheme);
+    }
+
+    dataToUpdate.chatThemes = themes;
+  }
+
+  // Legacy support: Add chatBackground if provided (for backward compatibility)
   if (chatBackground !== undefined) {
     dataToUpdate.chatBackground = chatBackground;
   }
 
-  // Upload chat background image to cloudinary if provided
+  // Legacy support: Upload chat background image to cloudinary if provided
   if (chatBackgroundImage) {
     const uploadResponse = await cloudinary.uploader.upload(
       chatBackgroundImage,

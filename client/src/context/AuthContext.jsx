@@ -93,10 +93,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateChatBackground = async (chatBackground) => {
+  const updateChatBackground = async (chatBackground, conversationUserId) => {
     try {
       const { data } = await axios.put("/api/auth/update-profile", {
-        chatBackground,
+        conversationUserId,
+        chatTheme: chatBackground,
       });
       if (data.success) {
         setAuthUser(data.user);
@@ -113,14 +114,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateChatBackgroundImage = async (imageFile) => {
+  const updateChatBackgroundImage = async (imageFile, conversationUserId) => {
     try {
       const reader = new FileReader();
       reader.readAsDataURL(imageFile);
       reader.onload = async () => {
         const base64Image = reader.result;
         const { data } = await axios.put("/api/auth/update-profile", {
-          chatBackgroundImage: base64Image,
+          conversationUserId,
+          chatThemeImage: base64Image,
         });
         if (data.success) {
           setAuthUser(data.user);

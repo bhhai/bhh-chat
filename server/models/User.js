@@ -28,9 +28,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    chatBackground: {
-      type: String,
-      default: "gradient-indigo-blue", // Default gradient background
+    chatThemes: {
+      type: Map,
+      of: String,
+      default: {}, // Map of userId -> theme (preset ID or image URL)
     },
   },
   {

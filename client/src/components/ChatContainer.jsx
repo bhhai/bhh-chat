@@ -51,8 +51,22 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     );
   };
 
-  // Check if chatBackground is an image URL or preset
-  const chatBackground = authUser?.chatBackground || "gradient-indigo-blue";
+  // Get theme for current conversation
+  const getConversationTheme = () => {
+    if (!selectedUser || !authUser?.chatThemes) {
+      return "gradient-indigo-blue"; // Default
+    }
+    // Convert Map to object if needed, or access directly
+    const themes = authUser.chatThemes;
+    if (themes instanceof Map) {
+      return themes.get(selectedUser._id) || "gradient-indigo-blue";
+    } else if (typeof themes === "object" && themes !== null) {
+      return themes[selectedUser._id] || "gradient-indigo-blue";
+    }
+    return "gradient-indigo-blue";
+  };
+
+  const chatBackground = getConversationTheme();
   const isImageBackground = chatBackground?.startsWith("http");
   const chatBackgroundClass = isImageBackground
     ? ""

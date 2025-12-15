@@ -20,6 +20,23 @@ const RightSidebar = () => {
   const [msgImages, setMsgImages] = useState([]);
   const [selectedBackgroundImage, setSelectedBackgroundImage] = useState(null);
 
+  // Get current conversation theme
+  const getCurrentTheme = () => {
+    if (!selectedUser || !authUser?.chatThemes) {
+      return "gradient-indigo-blue"; // Default
+    }
+    // Convert Map to object if needed, or access directly
+    const themes = authUser.chatThemes;
+    if (themes instanceof Map) {
+      return themes.get(selectedUser._id) || "gradient-indigo-blue";
+    } else if (typeof themes === "object") {
+      return themes[selectedUser._id] || "gradient-indigo-blue";
+    }
+    return "gradient-indigo-blue";
+  };
+
+  const currentTheme = getCurrentTheme();
+
   // Background options
   const backgroundOptions = [
     {
@@ -157,19 +174,20 @@ const RightSidebar = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
-                  updateChatBackground(bg.id);
-                  setSelectedBackgroundImage(null);
+                  if (selectedUser) {
+                    updateChatBackground(bg.id, selectedUser._id);
+                    setSelectedBackgroundImage(null);
+                  }
                 }}
                 className={`relative h-12 rounded-lg border-2 transition-all ${
-                  authUser?.chatBackground === bg.id &&
-                  !authUser?.chatBackground?.startsWith("http")
+                  currentTheme === bg.id && !currentTheme?.startsWith("http")
                     ? "border-blue-500 shadow-md"
                     : "border-gray-200 hover:border-gray-300"
                 } ${bg.className}`}
                 title={bg.name}
               >
-                {authUser?.chatBackground === bg.id &&
-                  !authUser?.chatBackground?.startsWith("http") && (
+                {currentTheme === bg.id &&
+                  !currentTheme?.startsWith("http") && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -195,7 +213,7 @@ const RightSidebar = () => {
             >
               <div
                 className={`relative h-12 rounded-lg border-2 transition-all flex items-center justify-center ${
-                  authUser?.chatBackground?.startsWith("http")
+                  currentTheme?.startsWith("http")
                     ? "border-blue-500 shadow-md bg-gray-50"
                     : "border-gray-200 hover:border-gray-300 bg-gray-50"
                 }`}
@@ -207,7 +225,7 @@ const RightSidebar = () => {
                       alt="Preview"
                       className="w-full h-full object-cover rounded-lg"
                     />
-                    {authUser?.chatBackground?.startsWith("http") && (
+                    {currentTheme?.startsWith("http") && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -217,10 +235,10 @@ const RightSidebar = () => {
                       </motion.div>
                     )}
                   </>
-                ) : authUser?.chatBackground?.startsWith("http") ? (
+                ) : currentTheme?.startsWith("http") ? (
                   <>
                     <img
-                      src={authUser.chatBackground}
+                      src={currentTheme}
                       alt="Current background"
                       className="w-full h-full object-cover rounded-lg"
                     />
@@ -268,8 +286,10 @@ const RightSidebar = () => {
                       toast.error("Image size should be less than 5MB");
                       return;
                     }
-                    setSelectedBackgroundImage(file);
-                    updateChatBackgroundImage(file);
+                    if (selectedUser) {
+                      setSelectedBackgroundImage(file);
+                      updateChatBackgroundImage(file, selectedUser._id);
+                    }
                   }
                   e.target.value = "";
                 }}
