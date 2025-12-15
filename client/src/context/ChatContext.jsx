@@ -268,6 +268,27 @@ export const ChatProvider = ({ children }) => {
     }
   }, [selectedUser]);
 
+  // Update selectedUser when users list is refreshed (to get updated lastActive)
+  useEffect(() => {
+    if (selectedUser && users.length > 0) {
+      const updatedUser = users.find((u) => u._id === selectedUser._id);
+      if (updatedUser) {
+        setSelectedUser(updatedUser);
+      }
+    }
+  }, [users, selectedUser]);
+
+  // Refresh users every minute to update lastActive
+  useEffect(() => {
+    if (authUser) {
+      const interval = setInterval(() => {
+        getUsers();
+      }, 60000); // Refresh every minute
+
+      return () => clearInterval(interval);
+    }
+  }, [authUser, getUsers]);
+
   const deleteMessage = useCallback(
     async (messageId) => {
       // Optimistically update message in state and cache

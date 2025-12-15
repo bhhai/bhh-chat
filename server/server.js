@@ -6,6 +6,7 @@ import { connectDB } from "./lib/db.js";
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
+import { updateLastActive } from "./services/userService.js";
 
 //Create Express app and HTTP server
 const app = express();
@@ -24,20 +25,32 @@ app.use(express.json({ limit: "4mb" }));
 app.use(cors());
 
 //Socket.io connection
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   const userId = socket.handshake.query.userId;
   console.log("User Connected", userId);
 
   if (userId) {
     userSocketMap[userId] = socket.id;
+    // Update last active time
+    try {
+      await updateLastActive(userId);
+    } catch (error) {
+      console.error("Error updating last active:", error);
+    }
     // Broadcast updated online users list to all clients
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   }
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("User Disconnected", userId);
     if (userId) {
       delete userSocketMap[userId];
+      // Update last active time on disconnect
+      try {
+        await updateLastActive(userId);
+      } catch (error) {
+        console.error("Error updating last active:", error);
+      }
       // Broadcast updated online users list to all clients
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
     }

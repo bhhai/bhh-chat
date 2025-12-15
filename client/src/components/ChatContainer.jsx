@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import toast from "react-hot-toast";
 import assets from "../assets/assets";
-import { formatMessageTime } from "../lib/utils";
+import { formatMessageTime, formatLastActive } from "../lib/utils";
 import { ChatContext } from "../context/ChatContext";
 import { AuthContext } from "../context/AuthContext";
 import {
@@ -213,7 +213,11 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
             )}
           </p>
           <p className="text-xs text-gray-500">
-            {onlineUsers.includes(selectedUser._id) ? "Online" : "Offline"}
+            {onlineUsers.includes(selectedUser._id)
+              ? "Online"
+              : selectedUser.lastActive
+              ? formatLastActive(selectedUser.lastActive)
+              : "Offline"}
           </p>
         </div>
         {/* Mobile & Tablet buttons */}

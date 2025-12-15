@@ -109,3 +109,22 @@ export const getUserById = async (userId) => {
   }
   return user;
 };
+
+/**
+ * Service to update user last active time
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} - Returns updated user object
+ */
+export const updateLastActive = async (userId) => {
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { lastActive: new Date() },
+    { new: true }
+  ).select("-password");
+
+  if (!updatedUser) {
+    throw new Error("User not found");
+  }
+
+  return updatedUser;
+};

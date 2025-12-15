@@ -1,8 +1,10 @@
 import React, { useContext, useEffect, useState } from "react";
-import assets, { imagesDummyData } from "../assets/assets";
+import assets from "../assets/assets";
 import { ChatContext } from "../context/ChatContext";
 import { AuthContext } from "../context/AuthContext";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
+import { formatLastActive } from "../lib/utils";
 
 const RightSidebar = () => {
   const { selectedUser, messages } = useContext(ChatContext);
@@ -52,6 +54,19 @@ const RightSidebar = () => {
           >
             {selectedUser.fullName}
           </motion.h1>
+
+          <motion.p
+            className="text-sm text-gray-500"
+            initial={{ y: 5, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.25 }}
+          >
+            {onlineUsers.includes(selectedUser._id)
+              ? "Online"
+              : selectedUser.lastActive
+              ? formatLastActive(selectedUser.lastActive)
+              : "Offline"}
+          </motion.p>
 
           {selectedUser.bio && (
             <motion.p
