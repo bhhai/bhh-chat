@@ -84,6 +84,7 @@ app.use("/api/messages", messageRouter);
 await connectDB();
 
 const PORT = process.env.PORT || 5000;
+console.log("PORT", PORT);
 
 // If Railway or local environment, start listening
 if (
