@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import assets from "../assets/assets";
 import { ChatContext } from "../context/ChatContext";
@@ -35,9 +36,11 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     typingUser,
     emitTyping,
     emitStopTyping,
+    setUnseenMessages,
   } = useContext(ChatContext);
   const { authUser, onlineUsers } = useContext(AuthContext);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // Use TanStack Query for messages
   const {
     data: messagesData,
@@ -174,10 +177,31 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     [showDropdown, setShowDropdown]
   );
 
-  // Reset scroll when user changes
+  // Reset scroll, reset unseen count, and refetch messages when user changes
   useEffect(() => {
-    resetScroll();
-  }, [selectedUser?._id, resetScroll]);
+    if (selectedUser?._id) {
+      resetScroll();
+      // Reset unseen count for this user immediately
+      setUnseenMessages((prev) => ({
+        ...prev,
+        [selectedUser._id]: 0,
+      }));
+      // Reset query to page 1 and refetch to ensure mark as seen is called
+      // resetQueries will reset to initial state and trigger a refetch
+      queryClient
+        .resetQueries({
+          queryKey: ["messages", selectedUser._id],
+          exact: true,
+        })
+        .then(() => {
+          // Ensure refetch happens after reset
+          queryClient.refetchQueries({
+            queryKey: ["messages", selectedUser._id],
+            exact: true,
+          });
+        });
+    }
+  }, [selectedUser?._id, resetScroll, setUnseenMessages, queryClient]);
 
   // Close reaction picker when clicking outside
   useEffect(() => {

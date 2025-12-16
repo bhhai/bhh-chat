@@ -10,20 +10,31 @@ const LoginPage = () => {
   const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isDataSubmitted, setIsDataSubmitted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsAlert, setShowTermsAlert] = useState(false);
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { login } = useContext(AuthContext);
   const onSubmitHandler = (e) => {
     e.preventDefault();
 
-    if (!termsAccepted) {
+    // Only check terms for Sign Up
+    if (currState === "Sign Up" && !termsAccepted) {
       setShowTermsAlert(true);
       return;
     }
 
     if (currState === "Sign Up" && !isDataSubmitted) {
+      // Validate password match before proceeding
+      if (password !== confirmPassword) {
+        setPasswordMismatch(true);
+        return;
+      }
+      setPasswordMismatch(false);
       setIsDataSubmitted(true);
       return;
     }
@@ -267,29 +278,146 @@ const LoginPage = () => {
                       </label>
                       <div className="relative group">
                         <input
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            setPasswordMismatch(false);
+                          }}
                           value={password}
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           required
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all group-hover:border-blue-300"
+                          className={`w-full px-4 py-3 pr-12 bg-gray-50 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all group-hover:border-blue-300 ${
+                            passwordMismatch
+                              ? "border-red-300 focus:ring-red-500"
+                              : "border-gray-200"
+                          }`}
                         />
-                        <div className="absolute right-3 top-3 text-gray-400 group-hover:text-blue-500 transition-colors">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer"
+                        >
+                          {showPassword ? (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                              <path
+                                fillRule="evenodd"
+                                d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.906 1.24L3.707 2.293zM14.577 11.752l-1.739-1.739a4 4 0 01-5.09-5.09L5.224 3.308A10.014 10.014 0 00.458 10c1.274 4.057 5.064 7 9.542 7a9.958 9.958 0 004.577-1.248z"
+                                clipRule="evenodd"
+                              />
+                              <path d="M5 10a5 5 0 017.752-3.577l-1.739-1.739A4 4 0 0010 6a4 4 0 00-4 4c0 .738.21 1.425.577 2.014l-1.739 1.739A5 5 0 015 10z" />
+                            </svg>
+                          )}
+                        </button>
                       </div>
                     </motion.div>
+
+                    {currState === "Sign Up" && (
+                      <motion.div
+                        initial={{ x: -10, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: 10, opacity: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="space-y-2"
+                      >
+                        <label className="text-gray-700 text-sm font-medium">
+                          Confirm Password
+                        </label>
+                        <div className="relative group">
+                          <input
+                            onChange={(e) => {
+                              setConfirmPassword(e.target.value);
+                              setPasswordMismatch(false);
+                            }}
+                            value={confirmPassword}
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            required={currState === "Sign Up"}
+                            className={`w-full px-4 py-3 pr-12 bg-gray-50 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all group-hover:border-blue-300 ${
+                              passwordMismatch
+                                ? "border-red-300 focus:ring-red-500"
+                                : "border-gray-200 focus:ring-blue-500"
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            className="absolute right-3 top-3 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer"
+                          >
+                            {showConfirmPassword ? (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path
+                                  fillRule="evenodd"
+                                  d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            ) : (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.906 1.24L3.707 2.293zM14.577 11.752l-1.739-1.739a4 4 0 01-5.09-5.09L5.224 3.308A10.014 10.014 0 00.458 10c1.274 4.057 5.064 7 9.542 7a9.958 9.958 0 004.577-1.248z"
+                                  clipRule="evenodd"
+                                />
+                                <path d="M5 10a5 5 0 017.752-3.577l-1.739-1.739A4 4 0 0010 6a4 4 0 00-4 4c0 .738.21 1.425.577 2.014l-1.739 1.739A5 5 0 015 10z" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                        {passwordMismatch && (
+                          <motion.p
+                            initial={{ y: -10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="text-sm text-red-500 flex items-center gap-2"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Passwords do not match
+                          </motion.p>
+                        )}
+                      </motion.div>
+                    )}
                   </>
                 )}
 
@@ -320,44 +448,46 @@ const LoginPage = () => {
                   )}
                 </AnimatePresence>
 
-                <motion.div
-                  className="flex items-start"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <div className="flex items-center h-5">
-                    <input
-                      id="terms"
-                      type="checkbox"
-                      checked={termsAccepted}
-                      onChange={() => {
-                        setTermsAccepted(!termsAccepted);
-                        setShowTermsAlert(false);
-                      }}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all"
-                    />
-                  </div>
-                  <div className="ml-3">
-                    <label
-                      htmlFor="terms"
-                      className="block text-sm text-gray-700"
-                    >
-                      I agree to the{" "}
-                      <span className="text-blue-600 cursor-pointer hover:underline font-medium">
-                        Terms
-                      </span>{" "}
-                      and{" "}
-                      <span className="text-blue-600 cursor-pointer hover:underline font-medium">
-                        Privacy Policy
-                      </span>
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      By creating an account, you agree to our terms and
-                      conditions
-                    </p>
-                  </div>
-                </motion.div>
+                {currState === "Sign Up" && (
+                  <motion.div
+                    className="flex items-start"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <div className="flex items-center h-5">
+                      <input
+                        id="terms"
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={() => {
+                          setTermsAccepted(!termsAccepted);
+                          setShowTermsAlert(false);
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all"
+                      />
+                    </div>
+                    <div className="ml-3">
+                      <label
+                        htmlFor="terms"
+                        className="block text-sm text-gray-700"
+                      >
+                        I agree to the{" "}
+                        <span className="text-blue-600 cursor-pointer hover:underline font-medium">
+                          Terms
+                        </span>{" "}
+                        and{" "}
+                        <span className="text-blue-600 cursor-pointer hover:underline font-medium">
+                          Privacy Policy
+                        </span>
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        By creating an account, you agree to our terms and
+                        conditions
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
 
                 {showTermsAlert && (
                   <motion.div
@@ -387,11 +517,11 @@ const LoginPage = () => {
                   whileTap={{ scale: 0.99 }}
                   className={`w-full py-3 px-4 text-white font-medium rounded-lg transition-all shadow-sm flex items-center justify-center gap-2
                     ${
-                      termsAccepted
-                        ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 hover:shadow-md"
-                        : "bg-gray-300 cursor-not-allowed"
+                      currState === "Sign Up" && !termsAccepted
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 hover:shadow-md"
                     }`}
-                  disabled={!termsAccepted}
+                  disabled={currState === "Sign Up" && !termsAccepted}
                 >
                   {currState === "Sign Up"
                     ? isDataSubmitted

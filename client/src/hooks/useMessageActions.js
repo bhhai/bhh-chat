@@ -21,12 +21,14 @@ export const useMessageActions = () => {
       await deleteMessage(messageToDelete._id);
       setShowDeleteModal(false);
       setMessageToDelete(null);
+      setShowDropdown(null); // Close dropdown after confirming delete
     }
   }, [messageToDelete, deleteMessage]);
 
   const handleCancelDelete = useCallback(() => {
     setShowDeleteModal(false);
     setMessageToDelete(null);
+    setShowDropdown(null);
   }, []);
 
   const handleMessageClick = useCallback(
@@ -57,4 +59,3 @@ export const useMessageActions = () => {
     handleMessageClick,
   };
 };
-

@@ -35,9 +35,9 @@ export const useMessages = (userId) => {
       return lastPage.hasMore ? lastPage.page + 1 : undefined;
     },
     enabled: !!userId && !!authUser,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always consider data stale to allow refetching when switching chats
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnMount: false, // Don't auto-refetch on mount - we'll manually refetch when selectedUser changes
     // React Query automatically keeps previous data for infinite queries
   });
 };
