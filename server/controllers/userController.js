@@ -3,6 +3,7 @@ import {
   loginUser,
   updateUserProfile,
 } from "../services/userService.js";
+import { io, userSocketMap } from "../server.js";
 
 /**
  * Controller to signup a new user
@@ -92,6 +93,16 @@ export const updateProfile = async (req, res) => {
       chatTheme,
       chatThemeImage,
     });
+
+    // Emit socket event to sync chat theme if conversationUserId is provided
+    if (conversationUserId && (chatTheme !== undefined || chatThemeImage)) {
+      const otherUserSocketId = userSocketMap[conversationUserId];
+      if (otherUserSocketId) {
+        io.to(otherUserSocketId).emit("chatThemeUpdated", {
+          conversationUserId: userId,
+        });
+      }
+    }
 
     res.json({
       success: true,

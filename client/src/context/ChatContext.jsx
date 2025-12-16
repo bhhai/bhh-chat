@@ -245,6 +245,21 @@ export const ChatProvider = ({ children }) => {
         setTypingUser(null);
       }
     });
+    socket.on("chatThemeUpdated", async (data) => {
+      // Handle chat theme sync - refresh authUser to get updated chatThemes
+      if (selectedUser && data.conversationUserId === selectedUser._id) {
+        // Refetch user data to get updated chatThemes
+        try {
+          const { data: userData } = await axios.get("/api/auth/check");
+          if (userData.success) {
+            // Update authUser in AuthContext
+            // This will be handled by AuthContext's checkAuth
+          }
+        } catch (error) {
+          console.error("Failed to refresh user data:", error);
+        }
+      }
+    });
   }, [socket, selectedUser, authUser, axios, queryClient]);
 
   const unsubscribeFromMessages = useCallback(() => {

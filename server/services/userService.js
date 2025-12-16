@@ -106,16 +106,35 @@ export const updateUserProfile = async (userId, updateData) => {
     }
 
     // Upload chat theme image to cloudinary if provided
+    let themeValue;
     if (chatThemeImage) {
       const uploadResponse = await cloudinary.uploader.upload(chatThemeImage, {
         folder: "chat-backgrounds",
       });
-      themes.set(conversationUserId, uploadResponse.secure_url);
+      themeValue = uploadResponse.secure_url;
+      themes.set(conversationUserId, themeValue);
     } else if (chatTheme !== undefined) {
+      themeValue = chatTheme;
       themes.set(conversationUserId, chatTheme);
     }
 
     dataToUpdate.chatThemes = themes;
+
+    // Also update the other user's chatThemes to sync background
+    const otherUser = await User.findById(conversationUserId);
+    if (otherUser) {
+      let otherThemes = otherUser.chatThemes;
+      if (!otherThemes) {
+        otherThemes = new Map();
+      } else if (!(otherThemes instanceof Map)) {
+        otherThemes = new Map(Object.entries(otherThemes));
+      }
+      // Set the theme for the current user's ID in the other user's themes
+      otherThemes.set(userId.toString(), themeValue);
+      await User.findByIdAndUpdate(conversationUserId, {
+        chatThemes: otherThemes,
+      });
+    }
   }
 
   // Legacy support: Add chatBackground if provided (for backward compatibility)

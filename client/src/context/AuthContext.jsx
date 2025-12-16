@@ -153,6 +153,17 @@ export const AuthProvider = ({ children }) => {
     newSocket.on("getOnlineUsers", (userIds) => {
       setOnlineUsers(userIds);
     });
+    newSocket.on("chatThemeUpdated", async () => {
+      // Refresh user data to get updated chatThemes
+      try {
+        const { data } = await axios.get("/api/auth/check");
+        if (data.success) {
+          setAuthUser(data.user);
+        }
+      } catch (error) {
+        console.error("Failed to refresh user data:", error);
+      }
+    });
   };
 
   useEffect(() => {
