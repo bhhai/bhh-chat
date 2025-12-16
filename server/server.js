@@ -1,36 +1,93 @@
 import express from "express";
+import "dotenv/config";
 import cors from "cors";
 import http from "http";
-import { Server } from "socket.io";
 import { connectDB } from "./lib/db.js";
+import userRouter from "./routes/userRoutes.js";
+import messageRouter from "./routes/messageRoutes.js";
+import { Server } from "socket.io";
+import { updateLastActive } from "./services/userService.js";
 
+//Create Express app and HTTP server
 const app = express();
 const server = http.createServer(app);
 
+//Socket.io setup
 export const io = new Server(server, {
   cors: { origin: "*" },
 });
 
+//Store online users
+export const userSocketMap = {};
+
+//Middleware setup
 app.use(express.json({ limit: "4mb" }));
 app.use(cors());
 
-app.get("/", (req, res) => {
-  res.send("Server is live");
+//Socket.io connection
+io.on("connection", async (socket) => {
+  const userId = socket.handshake.query.userId;
+  console.log("User Connected", userId);
+
+  if (userId) {
+    userSocketMap[userId] = socket.id;
+    // Update last active time
+    try {
+      await updateLastActive(userId);
+    } catch (error) {
+      console.error("Error updating last active:", error);
+    }
+    // Broadcast updated online users list to all clients
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  }
+
+  socket.on("disconnect", async () => {
+    console.log("User Disconnected", userId);
+    if (userId) {
+      delete userSocketMap[userId];
+      // Update last active time on disconnect
+      try {
+        await updateLastActive(userId);
+      } catch (error) {
+        console.error("Error updating last active:", error);
+      }
+      // Broadcast updated online users list to all clients
+      io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    }
+  });
+
+  // Handle typing events
+  socket.on("typing", (data) => {
+    const { userId, receiverId } = data;
+    const receiverSocketId = userSocketMap[receiverId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("typing", { userId });
+    }
+  });
+
+  socket.on("stopTyping", (data) => {
+    const { userId, receiverId } = data;
+    const receiverSocketId = userSocketMap[receiverId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("stopTyping", { userId });
+    }
+  });
 });
 
-async function start() {
-  try {
-    await connectDB();
-    console.log("DB connected");
+//Routes setup
+app.use("/api/status", (req, res) => {
+  res.send("Server is live");
+});
+app.use("/api/auth", userRouter);
+app.use("/api/messages", messageRouter);
 
-    const PORT = process.env.PORT;
-    server.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error(err);
-    process.exit(1);
-  }
-}
+await connectDB();
 
-start();
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, "0.0.0.0", () =>
+  console.log(`Server is running on port ${PORT}`)
+);
+
+//Export server for vercel
+export default server;
