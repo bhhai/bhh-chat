@@ -91,7 +91,9 @@ if (
   process.env.DEPLOYMENT_PLATFORM === "railway" ||
   process.env.NODE_ENV !== "production"
 ) {
-  server.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+  server.listen(PORT, "0.0.0.0", () =>
+    console.log(`Server is running on port ${PORT}`)
+  );
 }
 
 //Export server for vercel
