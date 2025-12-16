@@ -28,4 +28,3 @@ const ReactionPicker = ({ isSender, quickReactions, onReactionClick }) => {
 };
 
 export default ReactionPicker;
-

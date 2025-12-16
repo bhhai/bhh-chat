@@ -1,8 +1,12 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback } from "react";
 
 const SCROLL_THRESHOLD = -100;
 
-export const useScrollToBottom = (hasNextPage, isFetchingNextPage, fetchNextPage) => {
+export const useScrollToBottom = (
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage
+) => {
   const messagesContainerRef = useRef();
   const hasTriggeredLoadMore = useRef(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -10,6 +14,7 @@ export const useScrollToBottom = (hasNextPage, isFetchingNextPage, fetchNextPage
 
   const scrollToBottom = useCallback(() => {
     if (messagesContainerRef.current) {
+      // With flex-col-reverse, bottom is at top: 0
       messagesContainerRef.current.scrollTo({
         top: 0,
         behavior: "smooth",
@@ -23,15 +28,21 @@ export const useScrollToBottom = (hasNextPage, isFetchingNextPage, fetchNextPage
 
     const { scrollTop, scrollHeight, clientHeight } = container;
 
-    // Show button when scrollTop < SCROLL_THRESHOLD (scrolled away from bottom)
-    setShowScrollButton(scrollTop < SCROLL_THRESHOLD);
+    // With flex-col-reverse:
+    // - scrollTop === 0 means at bottom (newest messages)
+    // - scrollTop > threshold means scrolled up (away from bottom)
+    const distanceFromBottom = scrollTop;
+
+    // Show button when scrolled away from bottom (more than threshold)
+    setShowScrollButton(distanceFromBottom > Math.abs(SCROLL_THRESHOLD));
 
     if (!hasNextPage || isFetchingNextPage || isLoadingMore) {
       return;
     }
 
-    const point = clientHeight - scrollHeight;
-    const isAtTop = point === scrollTop;
+    // Check if scrolled to top (to load older messages)
+    // With flex-col-reverse, top is at scrollHeight - clientHeight
+    const isAtTop = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
 
     if (isAtTop && !hasTriggeredLoadMore.current) {
       hasTriggeredLoadMore.current = true;
@@ -69,4 +80,3 @@ export const useScrollToBottom = (hasNextPage, isFetchingNextPage, fetchNextPage
     reset,
   };
 };
-

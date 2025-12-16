@@ -24,7 +24,7 @@ const MessageList = ({
   isFetchingNextPage,
 }) => {
   return (
-    <>
+    <div className="pb-2 space-y-2">
       {messages.map((msg, index) => {
         // Handle both populated (object) and non-populated (string) sender
         const senderId =
@@ -67,9 +67,8 @@ const MessageList = ({
           </p>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
 export default MessageList;
-

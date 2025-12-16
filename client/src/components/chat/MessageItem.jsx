@@ -17,7 +17,7 @@ const MessageItem = ({
   showReactionPicker,
   showDropdown,
   hoveredReaction,
-  onMessageClick,
+  // onMessageClick,
   onReactionClick,
   onDeleteClick,
   onToggleReactionPicker,
@@ -31,12 +31,19 @@ const MessageItem = ({
 }) => {
   const isDeleted = msg.deleted;
 
+  const isPending = msg.isPending === true;
+  // Use tempId as key for pending messages to maintain stable identity during replacement
+  const messageKey = msg.tempId || msg._id;
+
   return (
     <motion.div
-      key={msg._id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
+      key={messageKey}
+      initial={isPending ? { opacity: 0.5 } : { opacity: 0, y: 20 }}
+      animate={{ opacity: isPending ? 0.5 : 1, y: 0 }}
+      transition={{
+        opacity: { duration: 0.3, ease: "easeOut" },
+        y: { duration: 0.2 },
+      }}
       className={`flex items-end gap-3 ${
         isSender ? "justify-end" : "justify-start"
       } group relative`}
@@ -68,16 +75,20 @@ const MessageItem = ({
               className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isDeleted) {
-                  onMessageClick(msg._id);
-                }
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
+                // if (!isDeleted) {
+                //   onMessageClick(msg._id);
+                // }
                 if (!isDeleted) {
                   onToggleReactionPicker(msg._id);
                 }
               }}
+              // onDoubleClick={(e) => {
+              //   e.stopPropagation();
+              //   if (!isDeleted) {
+              //     onToggleReactionPicker(msg._id);
+              //     console.log("showReactionPicker", showReactionPicker);
+              //   }
+              // }}
             >
               <OptimizedImage
                 src={msg.image}
@@ -106,16 +117,20 @@ const MessageItem = ({
               }`}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isDeleted) {
-                  onMessageClick(msg._id);
-                }
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
+                // if (!isDeleted) {
+                //   onMessageClick(msg._id);
+                // }
                 if (!isDeleted) {
                   onToggleReactionPicker(msg._id);
                 }
               }}
+              // onDoubleClick={(e) => {
+              //   e.stopPropagation();
+              //   if (!isDeleted) {
+              //     onToggleReactionPicker(msg._id);
+              //     console.log("showReactionPicker", showReactionPicker);
+              //   }
+              // }}
             >
               <p className="text-sm">{msg.text}</p>
               <div className="flex items-center justify-end gap-2">

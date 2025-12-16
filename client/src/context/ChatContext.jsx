@@ -52,6 +52,50 @@ export const ChatProvider = ({ children }) => {
   const sendMessage = useCallback(
     async (messageData) => {
       try {
+        // Create pending message to show immediately with low opacity
+        const tempId = `pending-${Date.now()}-${Math.random()}`;
+        const pendingMessage = {
+          _id: tempId,
+          text: messageData.text || "",
+          image: messageData.imageFile ? URL.createObjectURL(messageData.imageFile) : null,
+          sender: authUser._id,
+          receiver: selectedUser._id,
+          createdAt: new Date().toISOString(),
+          seen: false,
+          isPending: true,
+          tempId: tempId,
+        };
+
+        // Add pending message to cache immediately
+        if (selectedUser) {
+          queryClient.setQueryData(["messages", selectedUser._id], (oldData) => {
+            if (!oldData || !oldData.pages || oldData.pages.length === 0) {
+              return {
+                pages: [
+                  {
+                    messages: [pendingMessage],
+                    hasMore: true,
+                    page: 1,
+                    total: 1,
+                  },
+                ],
+                pageParams: [1],
+              };
+            }
+
+            const firstPage = oldData.pages[0];
+            const updatedFirstPage = {
+              ...firstPage,
+              messages: [pendingMessage, ...firstPage.messages],
+            };
+
+            return {
+              ...oldData,
+              pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+            };
+          });
+        }
+
         // Create FormData if image file is provided
         const formData = new FormData();
         if (messageData.text) {
@@ -69,13 +113,39 @@ export const ChatProvider = ({ children }) => {
         });
 
         // Don't reset queries here - let socket event handle the update
-        // This allows infinity scroll to continue working normally
-        // The socket event will update the cache optimistically with the new message
+        // The socket event will replace the pending message with the confirmed message
       } catch (error) {
+        // Remove pending message on error
+        if (selectedUser) {
+          queryClient.setQueryData(["messages", selectedUser._id], (oldData) => {
+            if (!oldData || !oldData.pages || oldData.pages.length === 0) {
+              return oldData;
+            }
+
+            const firstPage = oldData.pages[0];
+            const updatedMessages = firstPage.messages.filter(
+              (msg) => msg.tempId !== tempId
+            );
+
+            if (updatedMessages.length === firstPage.messages.length) {
+              return oldData;
+            }
+
+            const updatedFirstPage = {
+              ...firstPage,
+              messages: updatedMessages,
+            };
+
+            return {
+              ...oldData,
+              pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+            };
+          });
+        }
         toast.error(error.response?.data?.message || "Failed to send message");
       }
     },
-    [axios, selectedUser]
+    [axios, selectedUser, authUser, queryClient]
   );
 
   const subscribeToMessages = useCallback(() => {
@@ -117,14 +187,52 @@ export const ChatProvider = ({ children }) => {
             };
           }
 
-          // Check if message already exists in cache
           const firstPage = oldData.pages[0];
+          
+          // Check if message already exists in cache (by _id)
           const messageExists = firstPage.messages.some(
             (msg) => msg._id?.toString() === newMessage._id?.toString()
           );
 
           if (messageExists) {
             return oldData;
+          }
+
+          // If this is a message sent by current user, try to replace pending message
+          if (senderId?.toString() === authUser._id?.toString()) {
+            // Find the first pending message from current user (most recent pending)
+            const pendingIndex = firstPage.messages.findIndex(
+              (msg) => {
+                const msgSenderId =
+                  typeof msg.sender === "object" && msg.sender !== null
+                    ? msg.sender._id || msg.sender
+                    : msg.sender;
+                return (
+                  msg.isPending &&
+                  msgSenderId?.toString() === authUser._id?.toString()
+                );
+              }
+            );
+
+            if (pendingIndex !== -1) {
+              // Replace pending message with confirmed message
+              // Keep tempId for smooth layoutId transition
+              const updatedMessages = [...firstPage.messages];
+              const pendingMsg = updatedMessages[pendingIndex];
+              updatedMessages[pendingIndex] = {
+                ...newMessage,
+                tempId: pendingMsg.tempId || pendingMsg._id, // Preserve tempId for layoutId
+              };
+              const updatedFirstPage = {
+                ...firstPage,
+                messages: updatedMessages,
+              };
+
+              return {
+                ...oldData,
+                pages: [updatedFirstPage, ...oldData.pages.slice(1)],
+              };
+            }
           }
 
           // Add new message to the first page (newest messages)

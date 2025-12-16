@@ -57,7 +57,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
   }, [messagesData]);
 
   // Custom hooks
-  const { chatBackgroundClass, chatBackgroundStyle } =
+  const { chatBackgroundClass, chatBackgroundStyle, isBackgroundLoading } =
     useChatBackground(selectedUser);
   const {
     messagesContainerRef,
@@ -77,6 +77,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     handleReactionClick,
     groupReactions,
   } = useMessageReactions();
+  console.log("showReactionPicker", showReactionPicker);
 
   const {
     showDeleteModal,
@@ -166,6 +167,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
       setShowReactionPicker(
         showReactionPicker === messageId ? null : messageId
       );
+      console.log("showReactionPicker", showReactionPicker === messageId);
     },
     [showReactionPicker, setShowReactionPicker]
   );
@@ -203,6 +205,47 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     }
   }, [selectedUser?._id, resetScroll, setUnseenMessages, queryClient]);
 
+  // Scroll to bottom when opening a new chat or when messages are first loaded
+  useEffect(() => {
+    if (
+      messages.length > 0 &&
+      messagesContainerRef.current &&
+      !isLoadingMessages &&
+      !isFetchingNextPage
+    ) {
+      // Wait for DOM to update, then scroll to bottom
+      // With flex-col-reverse, bottom is at top: 0
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTo({
+            top: 0,
+            behavior: "auto", // Use 'auto' for instant scroll on initial load
+          });
+        }
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUser?._id, isLoadingMessages, isFetchingNextPage]);
+
+  // Auto scroll to bottom when new messages are added (user is near bottom)
+  useEffect(() => {
+    if (messages.length > 0 && messagesContainerRef.current && !isLoadingMore) {
+      // Only scroll if user is near bottom (within 200px)
+      // With flex-col-reverse, bottom is at scrollTop === 0
+      const container = messagesContainerRef.current;
+      const { scrollTop } = container;
+      const distanceFromBottom = scrollTop;
+
+      if (distanceFromBottom < 200) {
+        // User is near bottom, scroll to bottom smoothly
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, isLoadingMore, scrollToBottom]);
+
   // Close reaction picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -231,26 +274,37 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
 
   return selectedUser ? (
     <div
-      className={`h-full flex flex-col ${chatBackgroundClass}`}
+      className={`h-full flex flex-col ${chatBackgroundClass} relative`}
       style={chatBackgroundStyle}
     >
+      {/* Background Loading Indicator */}
+      {isBackgroundLoading && (
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center z-0 pointer-events-none">
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
+            <p className="text-sm text-gray-500">Loading background...</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
-      <ChatHeader
-        selectedUser={selectedUser}
-        onlineUsers={onlineUsers}
-        onToggleRightSidebar={onToggleRightSidebar}
-        showRightSidebar={showRightSidebar}
-        onBack={() => {
-          navigate(-1);
-        }}
-        typingUser={typingUser}
-      />
+      <div className="relative z-10">
+        <ChatHeader
+          selectedUser={selectedUser}
+          onlineUsers={onlineUsers}
+          onToggleRightSidebar={onToggleRightSidebar}
+          showRightSidebar={showRightSidebar}
+          onBack={() => {
+            navigate(-1);
+          }}
+          typingUser={typingUser}
+        />
+      </div>
 
       {/* Messages */}
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col-reverse relative"
+        className="flex-1 overflow-y-auto px-6 pt-6 pb-4 flex flex-col-reverse relative z-10"
       >
         <MessageList
           messages={messages}
@@ -282,14 +336,16 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
       </div>
 
       {/* Input Box */}
-      <ChatInput
-        input={input}
-        setInput={setInput}
-        onSendMessage={handleSendMessage}
-        onSendImage={handleSendImage}
-        onTyping={() => emitTyping(selectedUser?._id)}
-        onStopTyping={() => emitStopTyping(selectedUser?._id)}
-      />
+      <div className="relative z-10">
+        <ChatInput
+          input={input}
+          setInput={setInput}
+          onSendMessage={handleSendMessage}
+          onSendImage={handleSendImage}
+          onTyping={() => emitTyping(selectedUser?._id)}
+          onStopTyping={() => emitStopTyping(selectedUser?._id)}
+        />
+      </div>
 
       {/* Modals */}
       <DeleteMessageModal

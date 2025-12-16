@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
@@ -32,26 +32,49 @@ const getConversationTheme = (selectedUser, authUser) => {
 
 export const useChatBackground = (selectedUser) => {
   const { authUser } = useContext(AuthContext);
+  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
 
-  return useMemo(() => {
-    const chatBackground = getConversationTheme(selectedUser, authUser);
-    const isImageBackground = chatBackground?.startsWith("http");
-    const chatBackgroundClass = isImageBackground
-      ? ""
-      : getBackgroundClass(chatBackground);
-    const chatBackgroundStyle = isImageBackground
-      ? {
-          backgroundImage: `url(${chatBackground})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }
-      : {};
-
-    return {
-      chatBackgroundClass,
-      chatBackgroundStyle,
-    };
+  const chatBackground = useMemo(() => {
+    return getConversationTheme(selectedUser, authUser);
   }, [selectedUser, authUser]);
+
+  const isImageBackground = chatBackground?.startsWith("http");
+
+  // Preload image background
+  useEffect(() => {
+    if (isImageBackground && chatBackground) {
+      setIsBackgroundLoading(true);
+      const img = new Image();
+      img.onload = () => {
+        setIsBackgroundLoading(false);
+      };
+      img.onerror = () => {
+        setIsBackgroundLoading(false);
+      };
+      img.src = chatBackground;
+    } else {
+      setIsBackgroundLoading(false);
+    }
+  }, [chatBackground, isImageBackground]);
+
+  const chatBackgroundClass = isImageBackground
+    ? ""
+    : getBackgroundClass(chatBackground);
+  const chatBackgroundStyle = isImageBackground
+    ? {
+        backgroundImage: `url(${chatBackground})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        opacity: isBackgroundLoading ? 0.3 : 1,
+        transition: "opacity 0.3s ease-in-out",
+      }
+    : {};
+
+  return {
+    chatBackgroundClass,
+    chatBackgroundStyle,
+    isBackgroundLoading,
+  };
 };
 

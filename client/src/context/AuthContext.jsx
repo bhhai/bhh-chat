@@ -13,9 +13,11 @@ export const AuthProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [loading, setLoading] = useState(true); // Track loading state
 
   const checkAuth = async () => {
     try {
+      setLoading(true);
       const { data } = await axios.get("/api/auth/check");
       if (data.success) {
         setAuthUser(data.user);
@@ -34,12 +36,17 @@ export const AuthProvider = ({ children }) => {
           "Check Auth Error:",
           error.response?.data?.message || error.message
         );
-        toast.error(
-          error.response?.data?.message ||
-            error.message ||
-            "Authentication check failed."
-        );
+        // Don't show toast error on initial load
+        if (authUser !== null) {
+          toast.error(
+            error.response?.data?.message ||
+              error.message ||
+              "Authentication check failed."
+          );
+        }
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -174,6 +181,7 @@ export const AuthProvider = ({ children }) => {
       setAuthUser(null);
       socket?.disconnect();
       setSocket(null);
+      setLoading(false); // Set loading to false if no token
     }
   }, [token]);
 
@@ -190,6 +198,7 @@ export const AuthProvider = ({ children }) => {
     authUser,
     onlineUsers,
     socket,
+    loading,
     login,
     logout,
     updateProfile,
