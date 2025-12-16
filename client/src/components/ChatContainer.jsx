@@ -21,14 +21,22 @@ import ScrollToBottomButton from "./chat/ScrollToBottomButton";
 import MessageDetailModal from "./chat/MessageDetailModal";
 import DeleteMessageModal from "./chat/DeleteMessageModal";
 import MobileMenu from "./chat/MobileMenu";
+import { useNavigate } from "react-router-dom";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 
 const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
-  const { selectedUser, setSelectedUser, sendMessage, users } =
-    useContext(ChatContext);
+  const {
+    selectedUser,
+    // setSelectedUser,
+    sendMessage,
+    users,
+    typingUser,
+    emitTyping,
+    emitStopTyping,
+  } = useContext(ChatContext);
   const { authUser, onlineUsers } = useContext(AuthContext);
-
+  const navigate = useNavigate();
   // Use TanStack Query for messages
   const {
     data: messagesData,
@@ -207,7 +215,10 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
         onlineUsers={onlineUsers}
         onToggleRightSidebar={onToggleRightSidebar}
         showRightSidebar={showRightSidebar}
-        onBack={() => setSelectedUser(null)}
+        onBack={() => {
+          navigate(-1);
+        }}
+        typingUser={typingUser}
       />
 
       {/* Messages */}
@@ -251,6 +262,8 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
         setInput={setInput}
         onSendMessage={handleSendMessage}
         onSendImage={handleSendImage}
+        onTyping={() => emitTyping(selectedUser?._id)}
+        onStopTyping={() => emitStopTyping(selectedUser?._id)}
       />
 
       {/* Modals */}

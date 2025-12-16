@@ -9,6 +9,7 @@ const ChatHeader = ({
   onToggleRightSidebar,
   showRightSidebar,
   onBack,
+  typingUser,
 }) => {
   return (
     <div className="flex items-center gap-3 py-4 px-6 bg-white shadow-sm border-b border-gray-200">
@@ -25,11 +26,15 @@ const ChatHeader = ({
           )}
         </p>
         <p className="text-xs text-gray-500">
-          {onlineUsers.includes(selectedUser._id)
-            ? "Online"
-            : selectedUser.lastActive
-            ? formatLastActive(selectedUser.lastActive)
-            : "Offline"}
+          {typingUser ? (
+            <span className="text-indigo-600 italic">typing...</span>
+          ) : onlineUsers.includes(selectedUser._id) ? (
+            "Online"
+          ) : selectedUser.lastActive ? (
+            formatLastActive(selectedUser.lastActive)
+          ) : (
+            "Offline"
+          )}
         </p>
       </div>
       {/* Mobile & Tablet buttons */}

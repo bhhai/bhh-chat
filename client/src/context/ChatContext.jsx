@@ -15,6 +15,7 @@ export const ChatProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [unseenMessages, setUnseenMessages] = useState({});
+  const [typingUser, setTypingUser] = useState(null);
   const { socket, axios, authUser } = useContext(AuthContext);
   const queryClient = useQueryClient();
 
@@ -176,6 +177,74 @@ export const ChatProvider = ({ children }) => {
         queryKey: ["messages", conversationUserId],
       });
     });
+    socket.on("messageSeen", (seenMessage) => {
+      // Update seen status in cache for messages sent by current user
+      const senderId =
+        typeof seenMessage.sender === "object" && seenMessage.sender !== null
+          ? seenMessage.sender._id || seenMessage.sender
+          : seenMessage.sender;
+      const receiverId =
+        typeof seenMessage.receiver === "object" &&
+        seenMessage.receiver !== null
+          ? seenMessage.receiver._id || seenMessage.receiver
+          : seenMessage.receiver;
+
+      // If the seen message was sent by current user to selectedUser, update cache
+      if (
+        selectedUser &&
+        senderId?.toString() === authUser._id?.toString() &&
+        receiverId?.toString() === selectedUser._id?.toString()
+      ) {
+        queryClient.setQueryData(["messages", selectedUser._id], (oldData) => {
+          if (!oldData || !oldData.pages || oldData.pages.length === 0) {
+            return oldData;
+          }
+
+          // Update seen status for the message
+          const updatedPages = oldData.pages.map((page) => ({
+            ...page,
+            messages: page.messages.map((msg) =>
+              msg._id?.toString() === seenMessage._id?.toString()
+                ? { ...msg, seen: true }
+                : msg
+            ),
+          }));
+
+          return {
+            ...oldData,
+            pages: updatedPages,
+          };
+        });
+      }
+    });
+    socket.on("typing", (data) => {
+      // Handle typing indicator
+      const typingUserId =
+        typeof data.userId === "object" && data.userId !== null
+          ? data.userId._id || data.userId
+          : data.userId;
+
+      if (
+        selectedUser &&
+        typingUserId?.toString() === selectedUser._id?.toString()
+      ) {
+        setTypingUser(typingUserId);
+      }
+    });
+    socket.on("stopTyping", (data) => {
+      // Handle stop typing
+      const typingUserId =
+        typeof data.userId === "object" && data.userId !== null
+          ? data.userId._id || data.userId
+          : data.userId;
+
+      if (
+        selectedUser &&
+        typingUserId?.toString() === selectedUser._id?.toString()
+      ) {
+        setTypingUser(null);
+      }
+    });
   }, [socket, selectedUser, authUser, axios, queryClient]);
 
   const unsubscribeFromMessages = useCallback(() => {
@@ -183,13 +252,41 @@ export const ChatProvider = ({ children }) => {
       socket.off("newMessage");
       socket.off("messageDeleted");
       socket.off("messageReactionUpdated");
+      socket.off("messageSeen");
+      socket.off("typing");
+      socket.off("stopTyping");
     }
   }, [socket]);
+
+  // Function to emit typing event
+  const emitTyping = useCallback(
+    (receiverId) => {
+      if (socket && receiverId) {
+        socket.emit("typing", { userId: authUser._id, receiverId });
+      }
+    },
+    [socket, authUser]
+  );
+
+  // Function to emit stop typing event
+  const emitStopTyping = useCallback(
+    (receiverId) => {
+      if (socket && receiverId) {
+        socket.emit("stopTyping", { userId: authUser._id, receiverId });
+      }
+    },
+    [socket, authUser]
+  );
 
   useEffect(() => {
     subscribeToMessages();
     return () => unsubscribeFromMessages();
   }, [subscribeToMessages, unsubscribeFromMessages]);
+
+  // Reset typingUser when selectedUser changes
+  useEffect(() => {
+    setTypingUser(null);
+  }, [selectedUser?._id]);
 
   // Update selectedUser when users list is refreshed (to get updated lastActive)
   useEffect(() => {
@@ -266,6 +363,9 @@ export const ChatProvider = ({ children }) => {
     setUnseenMessages,
     deleteMessage,
     toggleReaction,
+    typingUser,
+    emitTyping,
+    emitStopTyping,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

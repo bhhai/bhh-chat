@@ -131,7 +131,11 @@ export const getMessageById = async (messageId) => {
  * @returns {Promise<Object>} - Returns updated message
  */
 export const markMessageAsSeen = async (messageId) => {
-  const message = await Message.findByIdAndUpdate(messageId, { seen: true });
+  const message = await Message.findByIdAndUpdate(
+    messageId,
+    { seen: true },
+    { new: true }
+  ).populate("sender receiver");
   if (!message) {
     throw new Error("Message not found");
   }

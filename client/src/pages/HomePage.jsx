@@ -117,21 +117,11 @@ const HomePage = () => {
         </div>
 
         {/* Right Sidebar - Desktop */}
-        <AnimatePresence>
-          {selectedUser && showRightSidebar && (
-            <motion.div
-              key="right-sidebar-desktop"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              style={{ willChange: "transform" }}
-              className="hidden lg:block h-full overflow-y-auto border-l border-gray-100"
-            >
-              <RightSidebar />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {selectedUser && showRightSidebar && (
+          <div className="hidden lg:block h-full overflow-y-auto border-l border-gray-100">
+            <RightSidebar />
+          </div>
+        )}
 
         {/* Right Sidebar - Mobile & Tablet (Fullscreen Overlay) */}
         <AnimatePresence>

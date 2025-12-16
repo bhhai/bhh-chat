@@ -87,11 +87,24 @@ export const getMessageDetail = async (req, res) => {
 export const markMessagesAsSeen = async (req, res) => {
   try {
     const { id } = req.params;
-    await markMessageAsSeenService(id);
+    const updatedMessage = await markMessageAsSeenService(id);
+
+    // Emit socket event to notify sender that message was seen
+    // Handle both ObjectId and populated object
+    const senderId =
+      typeof updatedMessage.sender === "object" &&
+      updatedMessage.sender !== null
+        ? updatedMessage.sender._id || updatedMessage.sender
+        : updatedMessage.sender;
+    const senderSocketId = userSocketMap[senderId];
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messageSeen", updatedMessage);
+    }
 
     res.json({
       success: true,
       message: "Message marked as seen",
+      data: updatedMessage,
     });
   } catch (error) {
     console.log(error.message);

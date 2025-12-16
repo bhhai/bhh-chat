@@ -1,10 +1,64 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { FaPaperclip } from "react-icons/fa";
 
-const ChatInput = ({ input, setInput, onSendMessage, onSendImage }) => {
+const ChatInput = ({
+  input,
+  setInput,
+  onSendMessage,
+  onSendImage,
+  onTyping,
+  onStopTyping,
+}) => {
+  const typingTimeoutRef = useRef(null);
+  const typingDebounceRef = useRef(null);
+  const hasEmittedTypingRef = useRef(false);
+
+  useEffect(() => {
+    // Clear existing timeouts
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    if (typingDebounceRef.current) {
+      clearTimeout(typingDebounceRef.current);
+    }
+
+    if (input.trim() !== "") {
+      // Debounce typing event - only emit after 300ms of typing
+      if (!hasEmittedTypingRef.current) {
+        typingDebounceRef.current = setTimeout(() => {
+          onTyping?.();
+          hasEmittedTypingRef.current = true;
+        }, 300);
+      }
+
+      // Reset stop typing timeout each time user types
+      typingTimeoutRef.current = setTimeout(() => {
+        onStopTyping?.();
+        hasEmittedTypingRef.current = false;
+      }, 2000);
+    } else {
+      // Stop typing if input is empty
+      if (hasEmittedTypingRef.current) {
+        onStopTyping?.();
+        hasEmittedTypingRef.current = false;
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (typingDebounceRef.current) {
+        clearTimeout(typingDebounceRef.current);
+      }
+    };
+  }, [input, onTyping, onStopTyping]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() === "") return;
+    onStopTyping?.();
     onSendMessage(input.trim());
     setInput("");
   };
@@ -59,4 +113,3 @@ const ChatInput = ({ input, setInput, onSendMessage, onSendImage }) => {
 };
 
 export default ChatInput;
-

@@ -1,7 +1,8 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useMemo } from "react";
 import assets from "../assets/assets";
 import { ChatContext } from "../context/ChatContext";
 import { AuthContext } from "../context/AuthContext";
+import { useMessages } from "../hooks/useMessages";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import { formatLastActive } from "../lib/utils";
@@ -9,7 +10,7 @@ import { FaCheck } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 const RightSidebar = () => {
-  const { selectedUser, messages } = useContext(ChatContext);
+  const { selectedUser } = useContext(ChatContext);
   const {
     logout,
     onlineUsers,
@@ -19,6 +20,15 @@ const RightSidebar = () => {
   } = useContext(AuthContext);
   const [msgImages, setMsgImages] = useState([]);
   const [selectedBackgroundImage, setSelectedBackgroundImage] = useState(null);
+
+  // Get messages using TanStack Query
+  const { data: messagesData } = useMessages(selectedUser?._id);
+
+  // Flatten messages from all pages
+  const messages = useMemo(() => {
+    if (!messagesData?.pages) return [];
+    return messagesData.pages.flatMap((page) => page.messages);
+  }, [messagesData]);
 
   // Get current conversation theme
   const getCurrentTheme = () => {

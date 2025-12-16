@@ -55,6 +55,23 @@ io.on("connection", async (socket) => {
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
     }
   });
+
+  // Handle typing events
+  socket.on("typing", (data) => {
+    const { userId, receiverId } = data;
+    const receiverSocketId = userSocketMap[receiverId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("typing", { userId });
+    }
+  });
+
+  socket.on("stopTyping", (data) => {
+    const { userId, receiverId } = data;
+    const receiverSocketId = userSocketMap[receiverId];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("stopTyping", { userId });
+    }
+  });
 });
 
 //Routes setup
