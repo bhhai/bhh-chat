@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import assets from "../assets/assets";
 import { AuthContext } from "../context/AuthContext";
 import { ChatContext } from "../context/ChatContext";
+import OptimizedImage from "./Image";
 
 const Sidebar = () => {
   const {
@@ -51,10 +52,14 @@ const Sidebar = () => {
       <div className="pb-6">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <img
+            <OptimizedImage
               src={assets.logo_icon}
-              alt="logo"
+              alt="BHH Chat logo"
+              width={40}
+              height={40}
               className="w-8 h-8 md:w-10 md:h-10"
+              objectFit="contain"
+              priority
             />
             <h1 className="text-xl md:text-2xl font-bold text-gray-800">
               BHH Chat
@@ -160,10 +165,14 @@ const Sidebar = () => {
               }`}
             >
               <div className="relative">
-                <img
+                <OptimizedImage
                   src={user?.profilePic || assets.avatar_icon}
                   alt={user.fullName}
-                  className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                  width={48}
+                  height={48}
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white shadow-sm"
+                  objectFit="cover"
+                  priority
                 />
                 {onlineUsers.includes(user._id) && (
                   <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>

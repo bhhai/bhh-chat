@@ -21,6 +21,7 @@ import ScrollToBottomButton from "./chat/ScrollToBottomButton";
 import MessageDetailModal from "./chat/MessageDetailModal";
 import DeleteMessageModal from "./chat/DeleteMessageModal";
 import MobileMenu from "./chat/MobileMenu";
+import OptimizedImage from "./Image";
 import { useNavigate } from "react-router-dom";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
@@ -297,7 +298,15 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
         transition={{ delay: 0.2 }}
         className="flex flex-col items-center"
       >
-        <img src={assets.logo_icon} alt="" className="w-20 h-20 mb-4" />
+        <OptimizedImage
+          src={assets.logo_icon}
+          alt="BHH Chat logo"
+          width={80}
+          height={80}
+          className="w-20 h-20 mb-4"
+          objectFit="contain"
+          priority
+        />
         <h3 className="text-2xl font-medium text-gray-800">BHH Chat</h3>
         <p className="text-gray-500 mt-2">Select a chat to start messaging</p>
       </motion.div>

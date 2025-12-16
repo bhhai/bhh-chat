@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatLastActive } from "../lib/utils";
 import { FaCheck } from "react-icons/fa";
 import toast from "react-hot-toast";
+import OptimizedImage from "./Image";
 
 const RightSidebar = () => {
   const { selectedUser } = useContext(ChatContext);
@@ -113,10 +114,14 @@ const RightSidebar = () => {
             transition={{ delay: 0.1 }}
             className="relative"
           >
-            <img
+            <OptimizedImage
               src={selectedUser?.profilePic || assets.avatar_icon}
-              alt=""
-              className="w-24 aspect-[1/1] rounded-full object-cover border-2 border-white shadow-md"
+              alt={selectedUser?.fullName || "User"}
+              width={96}
+              height={96}
+              className="w-24 rounded-full border-2 border-white shadow-md"
+              objectFit="cover"
+              priority
             />
             {onlineUsers.includes(selectedUser._id) && (
               <motion.div
@@ -232,10 +237,11 @@ const RightSidebar = () => {
               >
                 {selectedBackgroundImage ? (
                   <>
-                    <img
+                    <OptimizedImage
                       src={URL.createObjectURL(selectedBackgroundImage)}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded-lg"
+                      alt="Background preview"
+                      className="w-full h-full rounded-lg"
+                      objectFit="cover"
                     />
                     {currentTheme?.startsWith("http") && (
                       <motion.div
@@ -249,10 +255,11 @@ const RightSidebar = () => {
                   </>
                 ) : currentTheme?.startsWith("http") ? (
                   <>
-                    <img
+                    <OptimizedImage
                       src={currentTheme}
                       alt="Current background"
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full rounded-lg"
+                      objectFit="cover"
                     />
                     <motion.div
                       initial={{ scale: 0 }}
@@ -339,10 +346,11 @@ const RightSidebar = () => {
                     onClick={() => window.open(url)}
                     className="cursor-pointer rounded-lg overflow-hidden aspect-square bg-gray-100"
                   >
-                    <img
+                    <OptimizedImage
                       src={url}
-                      alt=""
-                      className="w-full h-full object-cover transition-all hover:opacity-90"
+                      alt="Shared media"
+                      className="w-full h-full transition-all hover:opacity-90"
+                      objectFit="cover"
                     />
                   </motion.div>
                 ))}

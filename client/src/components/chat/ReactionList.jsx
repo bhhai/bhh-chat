@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import assets from "../../assets/assets";
+import OptimizedImage from "../Image";
 
 const ReactionList = ({
   reactions,
@@ -91,10 +92,14 @@ const ReactionList = ({
                         key={rIdx}
                         className="flex items-center gap-2 text-sm"
                       >
-                        <img
+                        <OptimizedImage
                           src={userInfo.profilePic || assets.avatar_icon}
                           alt={userInfo.fullName}
-                          className="w-6 h-6 rounded-full object-cover"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6 rounded-full"
+                          objectFit="cover"
+                          priority
                         />
                         <span
                           className={`flex-1 ${

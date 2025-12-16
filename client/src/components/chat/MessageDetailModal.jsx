@@ -1,6 +1,7 @@
 import React from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
+import OptimizedImage from "../Image";
 
 const MessageDetailModal = ({ message, onClose, groupReactions }) => {
   if (!message) return null;
@@ -51,10 +52,11 @@ const MessageDetailModal = ({ message, onClose, groupReactions }) => {
                 <label className="text-sm font-medium text-gray-700">
                   Image
                 </label>
-                <img
+                <OptimizedImage
                   src={message.image}
                   alt="Message"
                   className="mt-2 rounded-lg max-w-full"
+                  objectFit="contain"
                 />
               </div>
             )}

@@ -2,6 +2,7 @@ import React, { useContext, useState } from "react";
 import assets from "../assets/assets";
 import { AuthContext } from "../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
+import OptimizedImage from "../components/Image";
 
 const LoginPage = () => {
   const [currState, setCurrState] = useState("Sign Up");
@@ -66,14 +67,21 @@ const LoginPage = () => {
             >
               <div>
                 <div className="flex items-center gap-3 mb-10">
-                  <motion.img
-                    src={assets.logo_icon}
-                    alt="Logo"
-                    className="h-10"
+                  <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.4 }}
-                  />
+                  >
+                    <OptimizedImage
+                      src={assets.logo_icon}
+                      alt="BHH Chat logo"
+                      width={40}
+                      height={40}
+                      className="h-10"
+                      objectFit="contain"
+                      priority
+                    />
+                  </motion.div>
                   <motion.span
                     className="text-2xl font-bold tracking-tight"
                     initial={{ opacity: 0 }}

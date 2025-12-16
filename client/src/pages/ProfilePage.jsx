@@ -3,6 +3,7 @@ import assets from "../assets/assets";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
+import OptimizedImage from "../components/Image";
 
 const ProfilePage = () => {
   const { authUser, updateProfile } = useContext(AuthContext);
@@ -58,14 +59,21 @@ const ProfilePage = () => {
             >
               <div>
                 <div className="flex items-center gap-3 mb-10">
-                  <motion.img
-                    src={assets.logo_icon}
-                    alt="Logo"
-                    className="h-10"
+                  <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.4 }}
-                  />
+                  >
+                    <OptimizedImage
+                      src={assets.logo_icon}
+                      alt="BHH Chat logo"
+                      width={40}
+                      height={40}
+                      className="h-10"
+                      objectFit="contain"
+                      priority
+                    />
+                  </motion.div>
                   <motion.span
                     className="text-2xl font-bold tracking-tight"
                     initial={{ opacity: 0 }}
@@ -151,14 +159,18 @@ const ProfilePage = () => {
                   </label>
                   <div className="flex items-center gap-4">
                     <div className="relative">
-                      <img
-                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                      <OptimizedImage
                         src={
                           selectedImage
                             ? URL.createObjectURL(selectedImage)
                             : authUser.profilePic || assets.avatar_icon
                         }
                         alt="Profile"
+                        width={80}
+                        height={80}
+                        className="w-20 h-20 rounded-full border-2 border-gray-200"
+                        objectFit="cover"
+                        priority
                       />
                       <label
                         htmlFor="avatar"

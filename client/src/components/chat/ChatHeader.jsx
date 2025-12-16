@@ -2,6 +2,7 @@ import React from "react";
 import { FaInfoCircle } from "react-icons/fa";
 import { formatLastActive } from "../../lib/utils";
 import assets from "../../assets/assets";
+import OptimizedImage from "../Image";
 
 const ChatHeader = ({
   selectedUser,
@@ -13,10 +14,14 @@ const ChatHeader = ({
 }) => {
   return (
     <div className="flex items-center gap-3 py-4 px-6 bg-white shadow-sm border-b border-gray-200">
-      <img
+      <OptimizedImage
         src={selectedUser.profilePic || assets.avatar_icon}
-        alt=""
-        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+        alt={selectedUser.fullName}
+        width={40}
+        height={40}
+        className="w-10 h-10 rounded-full border-2 border-white shadow"
+        objectFit="cover"
+        priority
       />
       <div className="flex-1">
         <p className="flex items-center gap-2 text-gray-900 font-medium">

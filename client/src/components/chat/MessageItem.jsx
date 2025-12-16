@@ -6,6 +6,7 @@ import assets from "../../assets/assets";
 import { formatMessageTime } from "../../lib/utils";
 import ReactionList from "./ReactionList";
 import ReactionPicker from "./ReactionPicker";
+import OptimizedImage from "../Image";
 
 const MessageItem = ({
   msg,
@@ -45,10 +46,14 @@ const MessageItem = ({
       onTouchEnd={isSender && !isDeleted ? onTouchEnd : undefined}
     >
       {!isSender && (
-        <img
+        <OptimizedImage
           src={selectedUser?.profilePic || assets.avatar_icon}
-          alt=""
-          className="w-8 h-8 rounded-full object-cover shrink-0"
+          alt={selectedUser?.fullName || "User"}
+          width={32}
+          height={32}
+          className="w-8 h-8 rounded-full shrink-0"
+          objectFit="cover"
+          priority
         />
       )}
 
@@ -74,10 +79,12 @@ const MessageItem = ({
                 }
               }}
             >
-              <img
+              <OptimizedImage
                 src={msg.image}
-                alt=""
+                alt="Message image"
                 className="max-w-[280px] rounded-lg shadow-sm border border-gray-200"
+                objectFit="cover"
+                priority={false}
               />
             </div>
             {isSender && (
@@ -157,10 +164,14 @@ const MessageItem = ({
       </div>
 
       {isSender && (
-        <img
+        <OptimizedImage
           src={authUser?.profilePic || assets.avatar_icon}
-          alt=""
-          className="w-8 h-8 rounded-full object-cover shrink-0"
+          alt={authUser?.fullName || "You"}
+          width={32}
+          height={32}
+          className="w-8 h-8 rounded-full shrink-0"
+          objectFit="cover"
+          priority
         />
       )}
 
