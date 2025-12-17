@@ -11,21 +11,28 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const [name, setName] = useState(authUser.fullName);
   const [bio, setBio] = useState(authUser.bio);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedImage) {
-      await updateProfile({ fullName: name, bio });
-      navigate("/");
-      return;
+    if (isLoading) return;
+    setIsLoading(true);
+    try {
+      if (!selectedImage) {
+        await updateProfile({ fullName: name, bio });
+        navigate("/");
+        return;
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedImage);
+      reader.onload = async () => {
+        const base64Image = reader.result;
+        await updateProfile({ profilePic: base64Image, fullName: name, bio });
+        navigate("/");
+      };
+    } finally {
+      setIsLoading(false);
     }
-    const reader = new FileReader();
-    reader.readAsDataURL(selectedImage);
-    reader.onload = async () => {
-      const base64Image = reader.result;
-      await updateProfile({ profilePic: base64Image, fullName: name, bio });
-      navigate("/");
-    };
   };
 
   return (
@@ -279,23 +286,35 @@ const ProfilePage = () => {
                 {/* Save Button */}
                 <motion.button
                   type="submit"
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium rounded-lg transition-all shadow-sm hover:from-blue-700 hover:to-blue-600 hover:shadow-md flex items-center justify-center gap-2"
+                  whileHover={isLoading ? {} : { scale: 1.01 }}
+                  whileTap={isLoading ? {} : { scale: 0.99 }}
+                  disabled={isLoading}
+                  className={`w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium rounded-lg transition-all shadow-sm hover:from-blue-700 hover:to-blue-600 hover:shadow-md flex items-center justify-center gap-2 ${
+                    isLoading ? "opacity-75 cursor-not-allowed" : ""
+                  }`}
                 >
-                  Save Changes
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      Save Changes
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </>
+                  )}
                 </motion.button>
               </form>
 

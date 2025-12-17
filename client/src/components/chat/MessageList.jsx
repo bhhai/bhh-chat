@@ -1,5 +1,6 @@
 import React from "react";
 import MessageItem from "./MessageItem";
+import { isSameSender } from "../../lib/utils";
 
 const MessageList = ({
   messages,
@@ -32,6 +33,13 @@ const MessageList = ({
             ? msg.sender._id || msg.sender
             : msg.sender;
         const isSender = senderId?.toString() === authUser._id?.toString();
+
+        // Get next message (in chronological order, which is next in array since messages are reversed)
+        // If next message has same sender, hide avatar (avatar will show on the last message in group)
+        const nextMsg =
+          index < messages.length - 1 ? messages[index + 1] : null;
+        const shouldShowAvatar = !isSameSender(msg, nextMsg);
+
         return (
           <MessageItem
             key={msg._id || index}
@@ -54,6 +62,7 @@ const MessageList = ({
             quickReactions={quickReactions}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
+            shouldShowAvatar={shouldShowAvatar}
           />
         );
       })}

@@ -10,6 +10,7 @@ export const useMessageActions = () => {
   const [showDropdown, setShowDropdown] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [mobileMenuMsg, setMobileMenuMsg] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteClick = useCallback((msg) => {
     setMessageToDelete(msg);
@@ -17,13 +18,18 @@ export const useMessageActions = () => {
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (messageToDelete) {
-      await deleteMessage(messageToDelete._id);
-      setShowDeleteModal(false);
-      setMessageToDelete(null);
-      setShowDropdown(null); // Close dropdown after confirming delete
+    if (messageToDelete && !isDeleting) {
+      setIsDeleting(true);
+      try {
+        await deleteMessage(messageToDelete._id);
+        setShowDeleteModal(false);
+        setMessageToDelete(null);
+        setShowDropdown(null); // Close dropdown after confirming delete
+      } finally {
+        setIsDeleting(false);
+      }
     }
-  }, [messageToDelete, deleteMessage]);
+  }, [messageToDelete, deleteMessage, isDeleting]);
 
   const handleCancelDelete = useCallback(() => {
     setShowDeleteModal(false);
@@ -48,6 +54,7 @@ export const useMessageActions = () => {
     showDropdown,
     showMobileMenu,
     mobileMenuMsg,
+    isDeleting,
     setShowDeleteModal,
     setSelectedMessageDetail,
     setShowDropdown,

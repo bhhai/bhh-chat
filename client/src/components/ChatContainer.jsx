@@ -50,10 +50,12 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     isFetchingNextPage,
   } = useMessages(selectedUser?._id);
 
-  // Flatten messages from all pages
+  // Flatten messages from all pages and reverse to show oldest first, newest last
   const messages = useMemo(() => {
     if (!messagesData?.pages) return [];
-    return messagesData.pages.flatMap((page) => page.messages);
+    const allMessages = messagesData.pages.flatMap((page) => page.messages);
+    // Reverse to show oldest first (top), newest last (bottom)
+    return allMessages.reverse();
   }, [messagesData]);
 
   // Custom hooks
@@ -77,7 +79,6 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     handleReactionClick,
     groupReactions,
   } = useMessageReactions();
-  console.log("showReactionPicker", showReactionPicker);
 
   const {
     showDeleteModal,
@@ -85,6 +86,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
     showDropdown,
     showMobileMenu,
     mobileMenuMsg,
+    isDeleting,
     setSelectedMessageDetail,
     setShowDropdown,
     setShowMobileMenu,
@@ -167,7 +169,6 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
       setShowReactionPicker(
         showReactionPicker === messageId ? null : messageId
       );
-      console.log("showReactionPicker", showReactionPicker === messageId);
     },
     [showReactionPicker, setShowReactionPicker]
   );
@@ -213,16 +214,38 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
       !isLoadingMessages &&
       !isFetchingNextPage
     ) {
-      // Wait for DOM to update, then scroll to bottom
-      // With flex-col-reverse, bottom is at top: 0
-      setTimeout(() => {
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTo({
-            top: 0,
-            behavior: "auto", // Use 'auto' for instant scroll on initial load
-          });
-        }
-      }, 100);
+      // Wait for DOM to update and images to load, then scroll to bottom
+      // With flex-col, bottom is at scrollHeight
+      const scrollToBottomCompletely = () => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        // Use requestAnimationFrame to ensure DOM is fully rendered
+        requestAnimationFrame(() => {
+          // Scroll immediately
+          container.scrollTop = container.scrollHeight;
+
+          // Double check after a short delay to ensure we're at the bottom
+          setTimeout(() => {
+            if (container) {
+              const { scrollTop, scrollHeight, clientHeight } = container;
+              const distanceFromBottom =
+                scrollHeight - scrollTop - clientHeight;
+
+              // If not at bottom, scroll again
+              if (distanceFromBottom > 10) {
+                container.scrollTop = container.scrollHeight;
+              }
+            }
+          }, 50);
+        });
+      };
+
+      // Initial scroll after DOM update
+      setTimeout(scrollToBottomCompletely, 100);
+
+      // Additional scroll after images might have loaded
+      setTimeout(scrollToBottomCompletely, 300);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUser?._id, isLoadingMessages, isFetchingNextPage]);
@@ -231,10 +254,10 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
   useEffect(() => {
     if (messages.length > 0 && messagesContainerRef.current && !isLoadingMore) {
       // Only scroll if user is near bottom (within 200px)
-      // With flex-col-reverse, bottom is at scrollTop === 0
+      // With flex-col, bottom is at scrollHeight - scrollTop - clientHeight === 0
       const container = messagesContainerRef.current;
-      const { scrollTop } = container;
-      const distanceFromBottom = scrollTop;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
       if (distanceFromBottom < 200) {
         // User is near bottom, scroll to bottom smoothly
@@ -277,6 +300,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
       className={`h-full flex flex-col ${chatBackgroundClass} relative`}
       style={chatBackgroundStyle}
     >
+      <ScrollToBottomButton show={showScrollButton} onClick={scrollToBottom} />
       {/* Background Loading Indicator */}
       {isBackgroundLoading && (
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center z-0 pointer-events-none">
@@ -304,7 +328,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-6 pt-6 pb-4 flex flex-col-reverse relative z-10"
+        className="flex-1 overflow-y-auto px-6 pt-6 pb-4 flex flex-col relative z-10"
       >
         <MessageList
           messages={messages}
@@ -328,11 +352,6 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
           isLoadingMore={isLoadingMore}
           isFetchingNextPage={isFetchingNextPage}
         />
-
-        <ScrollToBottomButton
-          show={showScrollButton}
-          onClick={scrollToBottom}
-        />
       </div>
 
       {/* Input Box */}
@@ -352,6 +371,7 @@ const ChatContainer = ({ onToggleRightSidebar, showRightSidebar }) => {
         show={showDeleteModal}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
+        isLoading={isDeleting}
       />
 
       <MobileMenu

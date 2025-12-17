@@ -11,7 +11,7 @@ const ScrollToBottomButton = ({ show, onClick }) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClick}
-      className="fixed bottom-24 right-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-3 shadow-lg transition-all"
+      className="absolute bottom-24 right-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-3 shadow-lg transition-all z-50 cursor-pointer"
     >
       <FaArrowDown size={16} />
     </motion.button>
@@ -19,4 +19,3 @@ const ScrollToBottomButton = ({ show, onClick }) => {
 };
 
 export default ScrollToBottomButton;
-

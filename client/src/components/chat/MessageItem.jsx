@@ -28,6 +28,7 @@ const MessageItem = ({
   quickReactions,
   onTouchStart,
   onTouchEnd,
+  shouldShowAvatar = true,
 }) => {
   const isDeleted = msg.deleted;
 
@@ -52,7 +53,7 @@ const MessageItem = ({
       }
       onTouchEnd={isSender && !isDeleted ? onTouchEnd : undefined}
     >
-      {!isSender && (
+      {!isSender && shouldShowAvatar && (
         <OptimizedImage
           src={selectedUser?.profilePic || assets.avatar_icon}
           alt={selectedUser?.fullName || "User"}
@@ -62,6 +63,9 @@ const MessageItem = ({
           objectFit="cover"
           priority
         />
+      )}
+      {!isSender && !shouldShowAvatar && (
+        <div className="w-8 shrink-0" /> // Spacer to maintain alignment
       )}
 
       <div className="flex flex-col items-end max-w-[80%]">
@@ -178,7 +182,7 @@ const MessageItem = ({
         )}
       </div>
 
-      {isSender && (
+      {isSender && shouldShowAvatar && (
         <OptimizedImage
           src={authUser?.profilePic || assets.avatar_icon}
           alt={authUser?.fullName || "You"}
@@ -188,6 +192,9 @@ const MessageItem = ({
           objectFit="cover"
           priority
         />
+      )}
+      {isSender && !shouldShowAvatar && (
+        <div className="w-8 shrink-0" /> // Spacer to maintain alignment
       )}
 
       {/* Dropdown Menu */}

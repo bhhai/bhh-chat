@@ -122,31 +122,49 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateChatBackgroundImage = async (imageFile, conversationUserId) => {
-    try {
-      const reader = new FileReader();
-      reader.readAsDataURL(imageFile);
-      reader.onload = async () => {
-        const base64Image = reader.result;
-        const { data } = await axios.put("/api/auth/update-profile", {
-          conversationUserId,
-          chatThemeImage: base64Image,
-        });
-        if (data.success) {
-          setAuthUser(data.user);
-          toast.success("Chat background image updated successfully");
-        } else {
-          toast.error(
-            data.message || "Failed to update chat background image."
-          );
-        }
-      };
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to update chat background image."
-      );
-    }
+    return new Promise((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const base64Image = reader.result;
+            const { data } = await axios.put("/api/auth/update-profile", {
+              conversationUserId,
+              chatThemeImage: base64Image,
+            });
+            if (data.success) {
+              setAuthUser(data.user);
+              toast.success("Chat background image updated successfully");
+              resolve(data);
+            } else {
+              toast.error(
+                data.message || "Failed to update chat background image."
+              );
+              reject(new Error(data.message || "Failed to update chat background image."));
+            }
+          } catch (error) {
+            toast.error(
+              error.response?.data?.message ||
+                error.message ||
+                "Failed to update chat background image."
+            );
+            reject(error);
+          }
+        };
+        reader.onerror = (error) => {
+          toast.error("Failed to read image file");
+          reject(error);
+        };
+        reader.readAsDataURL(imageFile);
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to update chat background image."
+        );
+        reject(error);
+      }
+    });
   };
 
   const connectSocket = (userData) => {

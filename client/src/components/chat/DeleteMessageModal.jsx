@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const DeleteMessageModal = ({ show, onConfirm, onCancel }) => {
+const DeleteMessageModal = ({ show, onConfirm, onCancel, isLoading = false }) => {
   if (!show) return null;
 
   return (
@@ -33,9 +33,19 @@ const DeleteMessageModal = ({ show, onConfirm, onCancel }) => {
             </button>
             <button
               onClick={onConfirm}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              disabled={isLoading}
+              className={`px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                isLoading ? "opacity-75 cursor-not-allowed" : ""
+              }`}
             >
-              Delete
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                "Delete"
+              )}
             </button>
           </div>
         </motion.div>

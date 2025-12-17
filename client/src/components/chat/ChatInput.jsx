@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FaPaperclip } from "react-icons/fa";
 
 const ChatInput = ({
@@ -12,6 +12,7 @@ const ChatInput = ({
   const typingTimeoutRef = useRef(null);
   const typingDebounceRef = useRef(null);
   const hasEmittedTypingRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Clear existing timeouts
@@ -55,12 +56,17 @@ const ChatInput = ({
     };
   }, [input, onTyping, onStopTyping]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (input.trim() === "") return;
+    if (input.trim() === "" || isLoading) return;
     onStopTyping?.();
-    onSendMessage(input.trim());
-    setInput("");
+    setIsLoading(true);
+    try {
+      await onSendMessage(input.trim());
+      setInput("");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -87,25 +93,29 @@ const ChatInput = ({
         </div>
         <button
           type="submit"
-          disabled={!input.trim()}
+          disabled={!input.trim() || isLoading}
           className={`p-3 rounded-full ${
-            input.trim()
+            input.trim() && !isLoading
               ? "bg-indigo-600 hover:bg-indigo-700"
               : "bg-gray-300 cursor-not-allowed"
-          } text-white transition-colors`}
+          } text-white transition-colors flex items-center justify-center`}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
+          {isLoading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
         </button>
       </form>
     </div>

@@ -46,3 +46,26 @@ export function formatLastActive(lastActive) {
     return "Inactive";
   }
 }
+
+/**
+ * Check if two messages are from the same sender (consecutive messages)
+ * @param {Object} currentMsg - Current message
+ * @param {Object} nextMsg - Next message (in chronological order)
+ * @returns {boolean} - True if messages are from the same sender
+ */
+export function isSameSender(currentMsg, nextMsg) {
+  if (!currentMsg || !nextMsg) return false;
+
+  // Get sender IDs
+  const currentSenderId =
+    typeof currentMsg.sender === "object" && currentMsg.sender !== null
+      ? currentMsg.sender._id || currentMsg.sender
+      : currentMsg.sender;
+  const nextSenderId =
+    typeof nextMsg.sender === "object" && nextMsg.sender !== null
+      ? nextMsg.sender._id || nextMsg.sender
+      : nextMsg.sender;
+
+  // Check if same sender
+  return String(currentSenderId) === String(nextSenderId);
+}

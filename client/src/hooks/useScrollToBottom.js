@@ -14,9 +14,9 @@ export const useScrollToBottom = (
 
   const scrollToBottom = useCallback(() => {
     if (messagesContainerRef.current) {
-      // With flex-col-reverse, bottom is at top: 0
+      // With flex-col, bottom is at scrollHeight
       messagesContainerRef.current.scrollTo({
-        top: 0,
+        top: messagesContainerRef.current.scrollHeight,
         behavior: "smooth",
       });
     }
@@ -28,10 +28,10 @@ export const useScrollToBottom = (
 
     const { scrollTop, scrollHeight, clientHeight } = container;
 
-    // With flex-col-reverse:
-    // - scrollTop === 0 means at bottom (newest messages)
-    // - scrollTop > threshold means scrolled up (away from bottom)
-    const distanceFromBottom = scrollTop;
+    // With flex-col:
+    // - scrollTop + clientHeight === scrollHeight means at bottom (newest messages)
+    // - distanceFromBottom > threshold means scrolled up (away from bottom)
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
     // Show button when scrolled away from bottom (more than threshold)
     setShowScrollButton(distanceFromBottom > Math.abs(SCROLL_THRESHOLD));
@@ -41,8 +41,8 @@ export const useScrollToBottom = (
     }
 
     // Check if scrolled to top (to load older messages)
-    // With flex-col-reverse, top is at scrollHeight - clientHeight
-    const isAtTop = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
+    // With flex-col, top is at scrollTop === 0
+    const isAtTop = scrollTop === 0;
 
     if (isAtTop && !hasTriggeredLoadMore.current) {
       hasTriggeredLoadMore.current = true;

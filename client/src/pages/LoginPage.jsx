@@ -17,9 +17,10 @@ const LoginPage = () => {
   const [passwordMismatch, setPasswordMismatch] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useContext(AuthContext);
-  const onSubmitHandler = (e) => {
+  const onSubmitHandler = async (e) => {
     e.preventDefault();
 
     // Only check terms for Sign Up
@@ -39,12 +40,17 @@ const LoginPage = () => {
       return;
     }
 
-    login(currState === "Sign Up" ? "signup" : "login", {
-      fullName,
-      email,
-      password,
-      bio,
-    });
+    setIsLoading(true);
+    try {
+      await login(currState === "Sign Up" ? "signup" : "login", {
+        fullName,
+        email,
+        password,
+        bio,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -513,33 +519,50 @@ const LoginPage = () => {
 
                 <motion.button
                   type="submit"
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
+                  whileHover={isLoading ? {} : { scale: 1.01 }}
+                  whileTap={isLoading ? {} : { scale: 0.99 }}
                   className={`w-full py-3 px-4 text-white font-medium rounded-lg transition-all shadow-sm flex items-center justify-center gap-2
                     ${
-                      currState === "Sign Up" && !termsAccepted
+                      (currState === "Sign Up" && !termsAccepted) || isLoading
                         ? "bg-gray-300 cursor-not-allowed"
                         : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 hover:shadow-md"
                     }`}
-                  disabled={currState === "Sign Up" && !termsAccepted}
+                  disabled={
+                    (currState === "Sign Up" && !termsAccepted) || isLoading
+                  }
                 >
-                  {currState === "Sign Up"
-                    ? isDataSubmitted
-                      ? "Complete Registration"
-                      : "Continue"
-                    : "Sign In"}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <span>
+                        {currState === "Sign Up"
+                          ? isDataSubmitted
+                            ? "Registering..."
+                            : "Processing..."
+                          : "Signing in..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {currState === "Sign Up"
+                        ? isDataSubmitted
+                          ? "Complete Registration"
+                          : "Continue"
+                        : "Sign In"}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </>
+                  )}
                 </motion.button>
               </form>
 
